@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Peralba Admin Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0A0E1A;
+      color: #E8ECFA;
+      font-family: 'Inter', 'DM Sans', system-ui, sans-serif;
+      line-height: 1.6;
+    }
+    
+    nav {
+      background: #141926;
+      border-bottom: 1px solid #252D42;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    nav .left { display: flex; align-items: center; gap: 12px; }
+    nav .logo {
+      width: 40px; height: 40px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #4A7FFF, #185FA5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    nav .title { font-size: 16px; font-weight: 700; }
+    nav .subtitle { font-size: 11px; color: #8694B0; }
+    nav .user { font-size: 12px; color: #8694B0; }
+
+    .container { padding: 32px 24px; max-width: 1200px; margin: 0 auto; }
+    
+    h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    .subtitle-text { color: #8694B0; font-size: 14px; margin-bottom: 32px; }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    
+    .tool-card {
+      background: #141926;
+      border: 1px solid #252D42;
+      border-radius: 12px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 12px;
+    }
+    .tool-card:hover {
+      border-color: #4A7FFF;
+      transform: translateY(-2px);
+    }
+    .tool-card .icon { font-size: 40px; }
+    .tool-card .name { font-size: 15px; font-weight: 600; }
+    .tool-card .desc { font-size: 12px; color: #8694B0; line-height: 1.5; }
+
+    .back-btn {
+      margin-bottom: 20px;
+      padding: 8px 16px;
+      border: 1px solid #252D42;
+      background: transparent;
+      color: #4A7FFF;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .back-btn:hover { border-color: #4A7FFF; }
+
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label { font-size: 11px; color: #8694B0; display: block; margin-bottom: 6px; }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      background: #0A0E1A;
+      border: 1px solid #252D42;
+      border-radius: 8px;
+      color: #E8ECFA;
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+    }
+    .form-group input:focus,
+    .form-group select:focus {
+      border-color: #4A7FFF;
+    }
+
+    .card {
+      background: #141926;
+      border: 1px solid #252D42;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .card-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #2DD4A0;
+      margin-bottom: 12px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .upload-zone {
+      background: #141926;
+      border: 2px dashed #4A7FFF;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .upload-zone:hover { background: #1A2235; }
+    .upload-zone .icon { font-size: 32px; margin-bottom: 12px; }
+    .upload-zone .title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .upload-zone .hint { font-size: 12px; color: #8694B0; }
+
+    .hidden { display: none; }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge-yellow { background: #2D2510; color: #F5C542; }
+    .badge-blue { background: #1F3A7D; color: #4A7FFF; }
+
+    .btn {
+      padding: 10px 16px;
+      border: 1px solid #252D42;
+      background: transparent;
+      color: #E8ECFA;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn:hover { border-color: #4A7FFF; color: #4A7FFF; }
+    .btn.primary {
+      background: linear-gradient(135deg, #4A7FFF, #185FA5);
+      border: none;
+      color: #fff;
+    }
+    .btn.primary:hover { opacity: 0.9; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .row { margin-bottom: 8px; display: grid; grid-template-columns: 1fr 1fr 1fr 80px 1fr auto; gap: 8px; align-items: end; }
+    .row input { width: 100%; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    table th {
+      text-align: left;
+      padding: 8px 10px;
+      font-size: 10px;
+      color: #8694B0;
+      font-weight: 600;
+      text-transform: uppercase;
+      border-bottom: 2px solid #252D42;
+    }
+    table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #252D42;
+    }
+    table .mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 11px; }
+    table .accent { color: #4A7FFF; }
+    table .dim { color: #8694B0; }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .stat-box {
+      background: #0A0E1A;
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .stat-label { font-size: 11px; color: #8694B0; margin-bottom: 4px; }
+    .stat-value { font-size: 16px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+    .stat-hint { font-size: 10px; color: #5A6885; margin-top: 2px; }
+
+    .tabs {
+      display: flex;
+      gap: 2px;
+      background: #141926;
+      border-radius: 10px;
+      padding: 3px;
+      border: 1px solid #252D42;
+      margin-bottom: 14px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 8px;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      background: transparent;
+      color: #8694B0;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: #4A7FFF;
+      color: #fff;
+    }
+
+    .error-box {
+      background: #2D1515;
+      border: 1px solid #F06868;
+      border-radius: 12px;
+      padding: 12px;
+      color: #F06868;
+      font-size: 12px;
+      margin-bottom: 14px;
+    }
+
+    .success-box {
+      background: #0C2D24;
+      border: 1px solid #2DD4A0;
+      border-radius: 12px;
+      padding: 12px;
+      color: #2DD4A0;
+      font-size: 12px;
+      margin-bottom: 14px;
+    }
+
+    .loading { text-align: center; padding: 20px; color: #8694B0; }
+
+    h2 { font-size: 24px; font-weight: 700; margin-bottom: 20px; }
+
+    .construction {
+      background: #141926;
+      border-radius: 12px;
+      padding: 32px;
+      text-align: center;
+      border: 1px dashed #252D42;
+    }
+    .construction .icon { font-size: 48px; margin-bottom: 16px; }
+    .construction h3 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+    .construction p { color: #8694B0; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="left">
+      <div class="logo">P</div>
+      <div>
+        <div class="title">Peralba Admin</div>
+        <div class="subtitle">Contabilità & Finanza</div>
+      </div>
+    </div>
+    <div class="user">Gonzalo Responsabile AFC</div>
+  </nav>
+
+  <div class="container">
+    <!-- HOME -->
+    <div id="home" class="section active">
+      <h1>Dashboard Amministrativa</h1>
+      <p class="subtitle-text">Gestione centralizzata di contabilità, fiscalità e rendiconti</p>
+      <div class="grid">
+        <div class="tool-card" onclick="showSection('fatture-auto')">
+          <div class="icon">📋</div>
+          <div class="name">Calcolo Fatture</div>
+          <div class="desc">Registrazione fatture automezzi con split IVA e costi</div>
+        </div>
+        <div class="tool-card" onclick="showSection('iva-split')">
+          <div class="icon">📊</div>
+          <div class="name">IVA Split</div>
+          <div class="desc">Gestione pro-rata e deducibilità IVA mista</div>
+        </div>
+        <div class="tool-card" onclick="showSection('analitiche')">
+          <div class="icon">📈</div>
+          <div class="name">Analitiche</div>
+          <div class="desc">Visualizzazione costi per centro di costo</div>
+        </div>
+        <div class="tool-card" onclick="showSection('rendiconti')">
+          <div class="icon">📄</div>
+          <div class="name">Rendiconti</div>
+          <div class="desc">Rendiconti mensili per strutture</div>
+        </div>
+        <div class="tool-card" onclick="showSection('compliance')">
+          <div class="icon">✅</div>
+          <div class="name">Compliance</div>
+          <div class="desc">Checklist fiscal e accounting compliance</div>
+        </div>
+        <div class="tool-card" onclick="showSection('documenti')">
+          <div class="icon">📚</div>
+          <div class="name">Documenti</div>
+          <div class="desc">Libreria normativa e policy aziendali</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CALCOLO FATTURE -->
+    <div id="fatture-auto" class="section">
+      <button class="back-btn" onclick="showSection('home')">← Torna alla home</button>
+      <h2>Calcolo Fatture Automezzi</h2>
+
+      <!-- UPLOAD STEP -->
+      <div id="step-upload">
+        <div class="upload-zone" onclick="document.getElementById('file-input').click()">
+          <div class="icon">📸</div>
+          <div class="title">Carica fattura (PDF o immagine)</div>
+          <div class="hint">Trascina qui o clicca per selezionare</div>
+          <input id="file-input" type="file" accept="image/*,.pdf" style="display:none;" onchange="handleFileUpload(this.files[0])">
+        </div>
+      </div>
+
+      <!-- OCR STEP -->
+      <div id="step-ocr" class="hidden">
+        <div class="loading">🔄 Estrazione dati in corso...</div>
+      </div>
+
+      <!-- EDIT STEP -->
+      <div id="step-edit" class="hidden">
+        <div class="card">
+          <div class="card-title">✅ FATTURA ESTRATTA</div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label>Fornitore</label>
+              <input type="text" id="fornitore" value="">
+            </div>
+            <div class="form-group">
+              <label>Tipo spesa</label>
+              <select id="tipo-spesa">
+                <option value="carburante">Carburante</option>
+                <option value="noleggio">Noleggio</option>
+                <option value="manutenzione">Manutenzione</option>
+                <option value="assicurazione">Assicurazione</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Importo netto</label>
+              <input type="number" id="tot-imp" step="0.01">
+            </div>
+            <div class="form-group">
+              <label>IVA</label>
+              <input type="number" id="tot-iva" step="0.01">
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🚗 RIGHE ALLOCAZIONE</div>
+          <div id="lines-container"></div>
+          <button class="btn" onclick="addLine()">+ Aggiungi riga</button>
+        </div>
+
+        <button class="btn primary" onclick="computeResult()" style="width:100%;">Genera Registrazione</button>
+      </div>
+
+      <!-- RESULT STEP -->
+      <div id="step-result" class="hidden">
+        <div class="card">
+          <div class="card-title">✅ RIEPILOGO FISCALE</div>
+          <div class="grid-3">
+            <div class="stat-box">
+              <div class="stat-label">Totale documento</div>
+              <div class="stat-value" id="res-tot">€ 0,00</div>
+              <div class="stat-hint">Imp + IVA</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">IVA detraibile</div>
+              <div class="stat-value" style="color:#2DD4A0;" id="res-iva-det">€ 0,00</div>
+              <div class="stat-hint">40% di IVA</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">IVA indetraibile</div>
+              <div class="stat-value" style="color:#F06868;" id="res-iva-indet">€ 0,00</div>
+              <div class="stat-hint">→ incrementa costo</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Costo deducibile</div>
+              <div class="stat-value" style="color:#2DD4A0;" id="res-costo-ded">€ 0,00</div>
+              <div class="stat-hint">70% del costo</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Costo indeducibile</div>
+              <div class="stat-value" style="color:#F06868;" id="res-costo-indet">€ 0,00</div>
+              <div class="stat-hint">30% del costo</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Cod. IVA</div>
+              <div class="stat-value" id="res-cod-iva">D2240</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchTab('primanota')">📒 Primanota</button>
+          <button class="tab-btn" onclick="switchTab('anDed')">📊 Analitica Ded.</button>
+          <button class="tab-btn" onclick="switchTab('anInded')">📊 Inded.</button>
+        </div>
+
+        <div id="tab-primanota" class="card">
+          <table>
+            <thead>
+              <tr>
+                <th>Riga</th>
+                <th>Tipo</th>
+                <th>Conto</th>
+                <th>Descrizione</th>
+                <th style="text-align:right;">DARE</th>
+                <th style="text-align:right;">AVERE</th>
+              </tr>
+            </thead>
+            <tbody id="primanota-body"></tbody>
+          </table>
+        </div>
+
+        <div id="tab-anDed" class="card hidden">
+          <table>
+            <thead>
+              <tr>
+                <th>Conto</th>
+                <th>Voce</th>
+                <th>Descrizione</th>
+                <th style="text-align:right;">Importo</th>
+              </tr>
+            </thead>
+            <tbody id="anDed-body"></tbody>
+          </table>
+        </div>
+
+        <div id="tab-anInded" class="card hidden">
+          <table>
+            <thead>
+              <tr>
+                <th>Conto</th>
+                <th>Voce</th>
+                <th>Descrizione</th>
+                <th style="text-align:right;">Importo</th>
+              </tr>
+            </thead>
+            <tbody id="anInded-body"></tbody>
+          </table>
+        </div>
+
+        <button class="btn" onclick="resetFatture()" style="width:100%;">← Nuova fattura</button>
+      </div>
+    </div>
+
+    <!-- PLACEHOLDER SECTIONS -->
+    <div id="iva-split" class="section">
+      <button class="back-btn" onclick="showSection('home')">← Torna alla home</button>
+      <h2>IVA Split</h2>
+      <div class="construction">
+        <div class="icon">🔨</div>
+        <h3>In costruzione</h3>
+        <p>Questo tool sarà disponibile a breve</p>
+      </div>
+    </div>
+
+    <div id="analitiche" class="section">
+      <button class="back-btn" onclick="showSection('home')">← Torna alla home</button>
+      <h2>Analitiche</h2>
+      <div class="construction">
+        <div class="icon">🔨</div>
+        <h3>In costruzione</h3>
+        <p>Questo tool sarà disponibile a breve</p>
+      </div>
+    </div>
+
+    <div id="rendiconti" class="section">
+      <button class="back-btn" onclick="showSection('home')">← Torna alla home</button>
+      <h2>Rendiconti</h2>
+      <div class="construction">
+        <div class="icon">🔨</div>
+        <h3>In costruzione</h3>
+        <p>Questo tool sarà disponibile a breve</p>
+      </div>
+    </div>
+
+    <div id="compliance" class="section">
+      <button class="back-btn" onclick="showSection('home')">← Torna alla home</button>
+      <h2>Compliance</h2>
+      <div class="construction">
+        <div class="icon">🔨</div>
+        <h3>In costruzione</h3>
+        <p>Questo tool sarà disponibile a breve</p>
+      </div>
+    </div>
+
+    <div id="documenti" class="section">
+      <button class="back-btn" onclick="showSection('home')">← Torna alla home</button>
+      <h2>Documenti</h2>
+      <div class="construction">
+        <div class="icon">🔨</div>
+        <h3>In costruzione</h3>
+        <p>Questo tool sarà disponibile a breve</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const FLEET = [
+      { targa: "FP781CW", cdc: "VEVIGONOVOCRC", tipo: "Autocarro", modello: "Fiat Ducato", assegnazione: "no" },
+      { targa: "GJ426VV", cdc: "VEHQSTR", tipo: "Autovettura", modello: "Tucson 1.6 CRDI 48V DCT XLine", assegnazione: "fringe benefit" },
+      { targa: "GL955PE", cdc: "VEJESOLOCRC", tipo: "Autovettura", modello: "OPEL Corsa 1.5 D 100 CV Edition", assegnazione: "fringe benefit" },
+      { targa: "GL960PE", cdc: "VEJESOLOCRC", tipo: "Autovettura", modello: "OPEL Corsa 1.5 D 100 CV Edition", assegnazione: "fringe benefit" },
+      { targa: "GM655PE", cdc: "VEVIGONOVOCRC", tipo: "Autovettura", modello: "OPEL Corsa 1.5 D 100 CV Edition", assegnazione: "fringe benefit" },
+      { targa: "GM965ZY", cdc: "VEHQAMM", tipo: "Autovettura", modello: "A4 Avant 30 Tdi 136 Cv", assegnazione: "fringe benefit" },
+      { targa: "GP433MR", cdc: "VEHQGES", tipo: "Autovettura", modello: "A4 Avant 30 Tdi 136 Cv", assegnazione: "fringe benefit" },
+      { targa: "GS784RK", cdc: "VEHQACQ", tipo: "Autovettura", modello: "KIA Xceed 1.6 Crdi 136 Cv", assegnazione: "fringe benefit" },
+      { targa: "GW527NN", cdc: "VEHQRIU", tipo: "Autovettura", modello: "Tonale 1.6 Diesel 130 Cv", assegnazione: "fringe benefit" },
+      { targa: "GY375AS", cdc: "VEHQSIC", tipo: "Autovettura", modello: "PEUGEOT 308 Bluehdi 130", assegnazione: "fringe benefit" },
+      { targa: "GZ850SP", cdc: "VEHQRFS", tipo: "Autovettura", modello: "KIA SPORTAGE 1.6 Crdi Mhev", assegnazione: "fringe benefit" },
+      { targa: "GZ851SP", cdc: "VEHQQGC", tipo: "Autovettura", modello: "KIA SPORTAGE 1.6 Crdi Mhev", assegnazione: "fringe benefit" },
+      { targa: "HA512AF", cdc: "VEHQAMM", tipo: "Autovettura", modello: "Renault Clio 100 CV 1.5 DCI", assegnazione: "fringe benefit" },
+      { targa: "HA970XA", cdc: "VEHQRIU", tipo: "Autovettura", modello: "DS 7 Bluehdi 130", assegnazione: "fringe benefit" },
+      { targa: "HB344BJ", cdc: "VEHQGES", tipo: "Autovettura", modello: "BMW X2 sDRIVE 18d", assegnazione: "fringe benefit" },
+      { targa: "HB370BJ", cdc: "VEHQDIR", tipo: "Autovettura", modello: "BMW X3 20D XDRIVE", assegnazione: "fringe benefit" },
+      { targa: "HB893TA", cdc: "VEHQAMM", tipo: "Autovettura", modello: "BMW X2 sDRIVE 18d", assegnazione: "fringe benefit" },
+      { targa: "HA360XA", cdc: "VEHQACQ", tipo: "Autovettura", modello: "Sportage 1.6 Crdi Mhev", assegnazione: "fringe benefit" },
+      { targa: "HA361XA", cdc: "VEHQSIC", tipo: "Autovettura", modello: "Sportage 1.6 Crdi Mhev", assegnazione: "fringe benefit" },
+      { targa: "HC520BK", cdc: "VEHQSTR", tipo: "Autovettura", modello: "Tiguan 2.0 Tdi 150 Cv", assegnazione: "fringe benefit" },
+    ];
+
+    const EXPENSE_TYPES = {
+      noleggio: {
+        label: "Noleggio",
+        autovettura: { ivaDetr: 0.40, costoDed: 0.70, contoDed: "030401004", contoInded: "030401009", voceDed: "03040100401", voceInded: "03040100901", descrDed: "Noleggio autovetture deducibile", descrInded: "Noleggio autovetture indeducibile" },
+        autocarro: { ivaDetr: 1.0, costoDed: 1.0, contoDed: "030401003", contoInded: null, voceDed: "03040100301", voceInded: null, descrDed: "Noleggio autocarri", descrInded: null },
+      },
+      carburante: {
+        label: "Carburante",
+        autovettura: { ivaDetr: 0.40, costoDed: 0.70, contoDed: "030203051", contoInded: "030203052", voceDed: "03020305101", voceInded: "03020305102", descrDed: "Carburante autovetture deducibili", descrInded: "Carburante autovetture indeducibili" },
+        autocarro: { ivaDetr: 1.0, costoDed: 1.0, contoDed: "030203050", contoInded: null, voceDed: "03020305001", voceInded: null, descrDed: "Carburante autocarri", descrInded: null },
+      },
+      manutenzione: {
+        label: "Manutenzione",
+        autovettura: { ivaDetr: 0.40, costoDed: 0.70, contoDed: "030203024", contoInded: "030203024", voceDed: "03020302401", voceInded: "03020302401", descrDed: "Manutenzione autovetture di terzi", descrInded: "Manutenzione autovetture (indeducibile)" },
+        autocarro: { ivaDetr: 1.0, costoDed: 1.0, contoDed: "030203023", contoInded: null, voceDed: "03020302301", voceInded: null, descrDed: "Manutenzione autocarri di terzi", descrInded: null },
+      },
+      assicurazione: {
+        label: "Assicurazione",
+        autovettura: { ivaDetr: 0, costoDed: 0.70, contoDed: "030203001", contoInded: "030203001", voceDed: "03020300101", voceInded: "03020300101", descrDed: "Assicurazioni (deducibile)", descrInded: "Assicurazioni (indeducibile)" },
+        autocarro: { ivaDetr: 0, costoDed: 1.0, contoDed: "030203001", contoInded: null, voceDed: "03020300101", voceInded: null, descrDed: "Assicurazioni", descrInded: null },
+      },
+    };
+
+    let state = {
+      invoiceData: null,
+      lines: [],
+      result: null,
+    };
+
+    function fmt(n) {
+      return new Intl.NumberFormat("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+    }
+
+    function showSection(id) {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    function handleFileUpload(file) {
+      if (!file) return;
+      document.getElementById('step-upload').classList.add('hidden');
+      document.getElementById('step-ocr').classList.remove('hidden');
+      runOCR(file);
+    }
+
+    async function runOCR(file) {
+      try {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const b64 = e.target.result.split(',')[1];
+          const mediaType = file.type === "application/pdf" ? "application/pdf" : file.type;
+          const msgContent = mediaType === "application/pdf"
+            ? [{ type: "document", source: { type: "base64", media_type: mediaType, data: b64 } }]
+            : [{ type: "image", source: { type: "base64", media_type: mediaType, data: b64 } }];
+          msgContent.push({ type: "text", text: "Estrai da questa fattura: numero fattura, data, importo netto, IVA, importo totale, nominativo fornitore. Rispondi SOLO in JSON: {numero: '', data: '', impNet: 0, iva: 0, tot: 0, fornitore: ''}" });
+
+          const resp = await fetch("https://ocr.gonzalo-alonsotv.workers.dev", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "claude-sonnet-4-20250514",
+              max_tokens: 1000,
+              messages: [{ role: "user", content: msgContent }],
+            }),
+          });
+
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error?.message || "Errore OCR");
+
+          const txt = data.content[0]?.text || "";
+          const clean = txt.replace(/```json|```/g, "").trim();
+          const parsed = JSON.parse(clean);
+
+          state.invoiceData = parsed;
+          document.getElementById('fornitore').value = parsed.fornitore;
+          document.getElementById('tot-imp').value = parsed.impNet;
+          document.getElementById('tot-iva').value = parsed.iva;
+
+          document.getElementById('step-ocr').classList.add('hidden');
+          document.getElementById('step-edit').classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+      } catch (err) {
+        alert("Errore: " + err.message);
+        location.reload();
+      }
+    }
+
+    function findVehicle(targa) {
+      const clean = targa.replace(/[\s\-\.]/g, "").toUpperCase();
+      return FLEET.find(v => v.targa.replace(/[\s\-\.]/g, "").toUpperCase() === clean);
+    }
+
+    function addLine() {
+      const container = document.getElementById('lines-container');
+      const id = Date.now();
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.id = 'line-' + id;
+      row.innerHTML = `
+        <div class="form-group">
+          <label>Targa</label>
+          <input type="text" placeholder="Es. GJ426VV" onchange="updateLine(${id}, 'targa', this.value)">
+        </div>
+        <div class="form-group">
+          <label>Info veicolo</label>
+          <div style="padding:10px; color:#8694B0; font-size:11px;" id="info-${id}">-</div>
+        </div>
+        <div class="form-group">
+          <label>Importo</label>
+          <input type="number" step="0.01" onchange="updateLine(${id}, 'imp', this.value)">
+        </div>
+        <div class="form-group">
+          <label>Totale</label>
+          <div style="padding:10px; color:#4A7FFF; font-weight:600; font-family:'JetBrains Mono',monospace; font-size:11px;" id="tot-${id}>€ 0,00</div>
+        </div>
+        <div></div>
+        <button class="btn" onclick="removeLine(${id})" style="width:40px; padding:4px;">✕</button>
+      `;
+      container.appendChild(row);
+      state.lines.push({ id, targa: '', imp: 0, car: null });
+    }
+
+    function updateLine(id, field, value) {
+      const line = state.lines.find(l => l.id === id);
+      if (!line) return;
+
+      if (field === 'targa') {
+        line.targa = value;
+        const car = findVehicle(value);
+        line.car = car;
+        const infoEl = document.getElementById('info-' + id);
+        if (car) {
+          infoEl.textContent = '✓ ' + car.modello;
+          infoEl.style.color = '#2DD4A0';
+        } else {
+          infoEl.textContent = '-';
+          infoEl.style.color = '#8694B0';
+        }
+      } else if (field === 'imp') {
+        line.imp = parseFloat(value) || 0;
+        document.getElementById('tot-' + id).textContent = '€ ' + fmt(line.imp);
+      }
+    }
+
+    function removeLine(id) {
+      state.lines = state.lines.filter(l => l.id !== id);
+      document.getElementById('line-' + id).remove();
+    }
+
+    function computeResult() {
+      if (state.lines.length === 0) { alert('Aggiungi almeno una riga'); return; }
+      const tipoSpesa = document.getElementById('tipo-spesa').value;
+      const totImp = parseFloat(document.getElementById('tot-imp').value) || 0;
+      const totIva = parseFloat(document.getElementById('tot-iva').value) || 0;
+
+      const car = state.lines[0].car;
+      const tipoVeicolo = car ? car.tipo : "Autovettura";
+      const ru = EXPENSE_TYPES[tipoSpesa][tipoVeicolo === "Autocarro" ? "autocarro" : "autovettura"];
+
+      const tIvaDet = totIva * ru.ivaDetr;
+      const tIvaIndet = totIva - tIvaDet;
+      const impAdj = totImp + tIvaIndet;
+      const tCDed = impAdj * ru.costoDed;
+      const tCIndet = impAdj * (1 - ru.costoDed);
+
+      // Primanota
+      const pn = [
+        { r: 1, t: "F", conto: "200200001", descr: "Debiti v/fornitori", dare: 0, avere: totImp + totIva },
+        { r: 2, t: "F", conto: "200100001", descr: "IVA a credito", dare: tIvaDet, avere: 0 },
+      ];
+
+      state.lines.forEach((l, i) => {
+        const isAutocarro = l.car?.tipo === "Autocarro";
+        const costRatio = isAutocarro ? 1.0 : ru.costoDed;
+        if (ru.contoDed) pn.push({ r: 3 + i*2, t: "N", conto: ru.contoDed, descr: ru.descrDed, dare: l.imp * costRatio, avere: 0 });
+        if (ru.contoInded) pn.push({ r: 4 + i*2, t: "N", conto: ru.contoInded, descr: ru.descrInded, dare: l.imp * (1 - costRatio), avere: 0 });
+      });
+
+      // Display
+      document.getElementById('res-tot').textContent = '€ ' + fmt(totImp + totIva);
+      document.getElementById('res-iva-det').textContent = '€ ' + fmt(tIvaDet);
+      document.getElementById('res-iva-indet').textContent = '€ ' + fmt(tIvaIndet);
+      document.getElementById('res-costo-ded').textContent = '€ ' + fmt(tCDed);
+      document.getElementById('res-costo-indet').textContent = '€ ' + fmt(tCIndet);
+
+      // Primanota table
+      const tbody = document.getElementById('primanota-body');
+      tbody.innerHTML = '';
+      pn.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="mono dim">${r.r}</td>
+          <td><span class="${r.t === 'F' ? 'badge badge-yellow' : 'badge badge-blue'}">${r.t}</span></td>
+          <td class="mono accent">${r.conto}</td>
+          <td>${r.descr}</td>
+          <td style="text-align:right;" class="mono">${r.dare > 0 ? '€ ' + fmt(r.dare) : '0,00'}</td>
+          <td style="text-align:right;" class="mono">${r.avere > 0 ? '€ ' + fmt(r.avere) : '0,00'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Analitica
+      const anbody = document.getElementById('anDed-body');
+      anbody.innerHTML = '';
+      state.lines.forEach(l => {
+        const tr = document.createElement('tr');
+        const isAutocarro = l.car?.tipo === "Autocarro";
+        const imp = l.imp * (isAutocarro ? 1.0 : ru.costoDed);
+        tr.innerHTML = `<td class="mono accent">${ru.contoDed}</td><td class="mono dim">${ru.voceDed}</td><td>${ru.descrDed}</td><td style="text-align:right;" class="mono">€ ${fmt(imp)}</td>`;
+        anbody.appendChild(tr);
+      });
+
+      if (ru.contoInded) {
+        const anbody2 = document.getElementById('anInded-body');
+        anbody2.innerHTML = '';
+        state.lines.forEach(l => {
+          const tr = document.createElement('tr');
+          const isAutocarro = l.car?.tipo === "Autocarro";
+          const imp = l.imp * (1 - (isAutocarro ? 1.0 : ru.costoDed));
+          tr.innerHTML = `<td class="mono accent">${ru.contoInded}</td><td class="mono dim">${ru.voceInded}</td><td>${ru.descrInded}</td><td style="text-align:right;" class="mono">€ ${fmt(imp)}</td>`;
+          anbody2.appendChild(tr);
+        });
+      }
+
+      document.getElementById('step-edit').classList.add('hidden');
+      document.getElementById('step-result').classList.remove('hidden');
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('[id^="tab-"]').forEach(el => el.classList.add('hidden'));
+      document.getElementById('tab-' + tab).classList.remove('hidden');
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    function resetFatture() {
+      state = { invoiceData: null, lines: [], result: null };
+      document.getElementById('step-upload').classList.remove('hidden');
+      document.getElementById('step-edit').classList.add('hidden');
+      document.getElementById('step-result').classList.add('hidden');
+      document.getElementById('file-input').value = '';
+      document.getElementById('lines-container').innerHTML = '';
+    }
+  </script>
+</body>
+</html>
