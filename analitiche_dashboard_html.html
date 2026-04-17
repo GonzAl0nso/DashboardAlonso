@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analitiche Spese Automezzi — Peralba</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/recharts@2.10.3/dist/Recharts.js"></script>
+  <script src="https://unpkg.com/recharts@2.10.3/dist/components/Tooltip.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useCallback } = React;
+    const { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts;
+
+    const C = {
+      bg: "#0C0E14", card: "#161923", cardAlt: "#1C2030", border: "#262B3D",
+      accent: "#4A7FFF", accentSoft: "#1E3A6E", green: "#2DD4A0", greenBg: "#0C2D24",
+      red: "#F06868", redBg: "#2D1515", yellow: "#F5C542", yellowBg: "#2D2510",
+      orange: "#FF9500", orangeBg: "#2D2010",
+      text: "#E4E8F1", dim: "#7D86A0", muted: "#4A5068",
+      mono: "'JetBrains Mono','Fira Code',monospace",
+      sans: "'Inter','DM Sans',system-ui,sans-serif",
+    };
+
+    const EXPENSE_COLORS = {
+      carburante: "#4A7FFF",
+      manutenzione: "#2DD4A0",
+      noleggio: "#F5C542",
+    };
+
+    const MONTHS = ["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"];
+
+    const fmt = n => new Intl.NumberFormat("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0);
+    const fmtK = n => n >= 1000 ? `€${(n/1000).toFixed(1)}k` : `€${fmt(n)}`;
+
+    function detectExpenseType(descr) {
+      if (!descr) return null;
+      const d = descr.toLowerCase();
+      if (d.includes("carburant") || d.includes("benzin") || d.includes("gasolio") || d.includes("diesel")) return "carburante";
+      if (d.includes("manutenz") || d.includes("riparaz") || d.includes("officin") || d.includes("pneumat") || d.includes("gomm")) return "manutenzione";
+      if (d.includes("noleggio") || d.includes("locaz") || d.includes("leasing") || d.includes("canone")) return "noleggio";
+      return null;
+    }
+
+    function parseCSV(text) {
+      const lines = text.split('\n').filter(l => l.trim());
+      if (lines.length < 2) return [];
+      
+      const sep = lines[0].includes(';') ? ';' : ',';
+      const rows = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(sep).map(c => c.trim().replace(/^"|"$/g, ''));
+        if (cols.length < 18) continue;
+        
+        const importoRaw = cols[9]?.replace(/\./g, '').replace(',', '.');
+        const importo = parseFloat(importoRaw);
+        const dataDoc = cols[12];
+        const cdc = cols[17];
+        const descrCdc = cols[19] || cols[17];
+        
+        if (!dataDoc || isNaN(importo) || importo <= 0) continue;
+        
+        let date;
+        const parts = dataDoc.split('/');
+        if (parts.length === 3) {
+          date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+        } else {
+          date = new Date(dataDoc);
+        }
+        if (isNaN(date.getTime())) continue;
+        
+        const tipo = detectExpenseType(descrCdc) || detectExpenseType(cols.join(' '));
+        if (!tipo) continue;
+        
+        rows.push({
+          importo,
+          data: date,
+          anno: date.getFullYear(),
+          mese: date.getMonth(),
+          cdc,
+          descrCdc: descrCdc || cdc,
+          tipo,
+        });
+      }
+      return rows;
+    }
+
+    function App() {
+      const [data, setData] = useState([]);
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState(null);
+      const [anno, setAnno] = useState(2025);
+      const [filterCdc, setFilterCdc] = useState("tutti");
+      const [filterTipo, setFilterTipo] = useState("tutti");
+      const [filterMese, setFilterMese] = useState("tutti");
+      const [view, setView] = useState("trend");
+      const [fileName, setFileName] = useState(null);
+
+      function processFile(text) {
+        const rows = parseCSV(text);
+        if (rows.length === 0) {
+          setError("Nessun dato trovato nel CSV.");
+          return;
+        }
+        setData(rows);
+        const anni = [...new Set(rows.map(r => r.anno))].sort();
+        if (anni.length > 0) setAnno(anni[anni.length - 1]);
+        setError(null);
+      }
+
+      const handleFileUpload = useCallback((f) => {
+        if (!f) return;
+        setFileName(f.name);
+        setLoading(true);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          processFile(e.target.result);
+          setLoading(false);
+        };
+        reader.onerror = () => { setError("Errore lettura file"); setLoading(false); };
+        reader.readAsText(f, 'windows-1252');
+      }, []);
+
+      const filtered = data.filter(r => {
+        if (r.anno !== anno) return false;
+        if (filterCdc !== "tutti" && r.cdc !== filterCdc) return false;
+        if (filterTipo !== "tutti" && r.tipo !== filterTipo) return false;
+        if (filterMese !== "tutti" && r.mese !== parseInt(filterMese)) return false;
+        return true;
+      });
+
+      const allCdcs = [...new Set(data.filter(r => r.anno === anno).map(r => r.cdc))].sort();
+      const anni = [...new Set(data.map(r => r.anno))].sort();
+
+      const trendData = MONTHS.map((m, mi) => {
+        const row = { mese: m };
+        ["carburante", "manutenzione", "noleggio"].forEach(tipo => {
+          if (filterTipo !== "tutti" && filterTipo !== tipo) return;
+          row[tipo] = filtered.filter(r => r.mese === mi && r.tipo === tipo).reduce((s, r) => s + r.importo, 0);
+        });
+        row.totale = (row.carburante || 0) + (row.manutenzione || 0) + (row.noleggio || 0);
+        return row;
+      });
+
+      const cdcData = allCdcs.map(cdc => {
+        const rows = filtered.filter(r => r.cdc === cdc);
+        return {
+          cdc: cdc.length > 12 ? cdc.substring(0, 12) + '…' : cdc,
+          cdcFull: cdc,
+          carburante: rows.filter(r => r.tipo === "carburante").reduce((s, r) => s + r.importo, 0),
+          manutenzione: rows.filter(r => r.tipo === "manutenzione").reduce((s, r) => s + r.importo, 0),
+          noleggio: rows.filter(r => r.tipo === "noleggio").reduce((s, r) => s + r.importo, 0),
+        };
+      }).filter(r => (r.carburante + r.manutenzione + r.noleggio) > 0)
+        .sort((a, b) => (b.carburante + b.manutenzione + b.noleggio) - (a.carburante + a.manutenzione + a.noleggio));
+
+      const alerts = [];
+      ["carburante", "manutenzione", "noleggio"].forEach(tipo => {
+        if (filterTipo !== "tutti" && filterTipo !== tipo) return;
+        const vals = trendData.map(r => r[tipo] || 0).filter(v => v > 0);
+        if (vals.length < 2) return;
+        const media = vals.reduce((s, v) => s + v, 0) / vals.length;
+        trendData.forEach((r, mi) => {
+          const v = r[tipo] || 0;
+          if (v === 0) return;
+          const delta = ((v - media) / media) * 100;
+          if (Math.abs(delta) >= 20) {
+            alerts.push({ mese: r.mese, tipo, importo: v, media, delta, severity: Math.abs(delta) >= 40 ? "high" : "medium" });
+          }
+        });
+      });
+
+      const totCarb = filtered.filter(r => r.tipo === "carburante").reduce((s, r) => s + r.importo, 0);
+      const totMan = filtered.filter(r => r.tipo === "manutenzione").reduce((s, r) => s + r.importo, 0);
+      const totNol = filtered.filter(r => r.tipo === "noleggio").reduce((s, r) => s + r.importo, 0);
+      const totale = totCarb + totMan + totNol;
+
+      const customTooltip = ({ active, payload }) => {
+        if (!active || !payload?.length) return null;
+        return (
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", fontSize: 12 }}>
+            {payload.map((p, i) => (
+              <div key={i} style={{ color: p.color }}>{p.name}: € {fmt(p.value)}</div>
+            ))}
+          </div>
+        );
+      };
+
+      return (
+        <div style={{ fontFamily: C.sans, background: C.bg, minHeight: "100vh", color: C.text, padding: "20px 12px" }}>
+          <style>{`* { box-sizing: border-box; } select option { background: #161923; }`}</style>
+
+          <div style={{ maxWidth: 1100, margin: "0 auto 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 12, background: `linear-gradient(135deg, ${C.accent}, #6C3AED)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>📈</div>
+              <div>
+                <div style={{ fontSize: 20, fontWeight: 700 }}>Analitica Spese Automezzi</div>
+                <div style={{ fontSize: 12, color: C.dim }}>Peralba — Carburante, Manutenzione, Noleggio</div>
+              </div>
+            </div>
+            {alerts.length > 0 && (
+              <div style={{ background: C.redBg, border: `1px solid ${C.red}`, borderRadius: 8, padding: "6px 14px", fontSize: 12, color: C.red, fontWeight: 600 }}>
+                🚨 {alerts.length} alert
+              </div>
+            )}
+          </div>
+
+          <div style={{ maxWidth: 1100, margin: "0 auto 20px", display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+            <label style={{ background: C.accentSoft, color: C.accent, border: `1px solid ${C.accent}`, borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+              📂 {fileName || "Carica CSV"}
+              <input type="file" accept=".csv,.txt" style={{ display: "none" }} onChange={e => handleFileUpload(e.target.files[0])} />
+            </label>
+
+            {data.length > 0 && (
+              <>
+                <select value={anno} onChange={e => setAnno(parseInt(e.target.value))} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: "8px 12px", fontSize: 13, outline: "none" }}>
+                  {anni.map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
+
+                <select value={filterMese} onChange={e => setFilterMese(e.target.value)} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: "8px 12px", fontSize: 13, outline: "none" }}>
+                  <option value="tutti">Tutti i mesi</option>
+                  {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                </select>
+
+                <select value={filterCdc} onChange={e => setFilterCdc(e.target.value)} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: "8px 12px", fontSize: 13, outline: "none", maxWidth: 200 }}>
+                  <option value="tutti">Tutti i CdC</option>
+                  {allCdcs.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+
+                <select value={filterTipo} onChange={e => setFilterTipo(e.target.value)} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: "8px 12px", fontSize: 13, outline: "none" }}>
+                  <option value="tutti">Tutte le spese</option>
+                  <option value="carburante">Carburante</option>
+                  <option value="manutenzione">Manutenzione</option>
+                  <option value="noleggio">Noleggio</option>
+                </select>
+              </>
+            )}
+          </div>
+
+          {error && <div style={{ maxWidth: 1100, margin: "0 auto 20px", background: C.redBg, border: `1px solid ${C.red}`, borderRadius: 10, padding: 14, color: C.red, fontSize: 13 }}>⚠️ {error}</div>}
+
+          {loading && <div style={{ maxWidth: 1100, margin: "0 auto", textAlign: "center", padding: 40, color: C.dim }}>⏳ Caricamento...</div>}
+
+          {data.length === 0 && !loading && !error && (
+            <div style={{ maxWidth: 1100, margin: "0 auto", background: C.card, borderRadius: 16, padding: "56px 24px", textAlign: "center", border: `2px dashed ${C.border}` }}>
+              <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.5 }}>📊</div>
+              <div style={{ fontSize: 16, fontWeight: 600 }}>Carica il file CSV analitica</div>
+              <div style={{ fontSize: 13, color: C.dim, marginTop: 8 }}>Usa il pulsante in alto per caricare i dati</div>
+            </div>
+          )}
+
+          {data.length > 0 && !loading && (
+            <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 }}>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+                {[
+                  { label: "Totale", value: totale, color: C.text, icon: "💰" },
+                  { label: "Carburante", value: totCarb, color: EXPENSE_COLORS.carburante, icon: "⛽" },
+                  { label: "Manutenzione", value: totMan, color: EXPENSE_COLORS.manutenzione, icon: "🔧" },
+                  { label: "Noleggio", value: totNol, color: EXPENSE_COLORS.noleggio, icon: "🚗" },
+                ].map((k, i) => (
+                  <div key={i} style={{ background: C.card, borderRadius: 10, padding: 16, border: `1px solid ${C.border}` }}>
+                    <div style={{ fontSize: 11, color: C.dim, marginBottom: 6 }}>{k.icon} {k.label}</div>
+                    <div style={{ fontSize: 20, fontWeight: 700, fontFamily: C.mono, color: k.color }}>{fmtK(k.value)}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: "flex", gap: 2, background: C.card, borderRadius: 10, padding: 3, border: `1px solid ${C.border}` }}>
+                {[{ k: "trend", l: "📈 Trend" }, { k: "cdc", l: "🏢 Per CdC" }, { k: "alert", l: `🚨 Alert (${alerts.length})` }].map(t => (
+                  <button key={t.k} onClick={() => setView(t.k)} style={{ flex: 1, padding: "10px 8px", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 600, background: view === t.k ? C.accent : "transparent", color: view === t.k ? "#fff" : C.dim, cursor: "pointer" }}>{t.l}</button>
+                ))}
+              </div>
+
+              {view === "trend" && (
+                <div style={{ background: C.card, borderRadius: 10, padding: 16, border: `1px solid ${C.border}` }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 16 }}>Trend mensile {anno}</div>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <LineChart data={trendData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                      <XAxis dataKey="mese" tick={{ fill: C.dim, fontSize: 11 }} />
+                      <YAxis tick={{ fill: C.dim, fontSize: 11 }} />
+                      <Tooltip content={customTooltip} />
+                      <Legend />
+                      {(filterTipo === "tutti" || filterTipo === "carburante") && <Line type="monotone" dataKey="carburante" stroke={EXPENSE_COLORS.carburante} strokeWidth={2} dot={{ r: 3 }} name="Carburante" />}
+                      {(filterTipo === "tutti" || filterTipo === "manutenzione") && <Line type="monotone" dataKey="manutenzione" stroke={EXPENSE_COLORS.manutenzione} strokeWidth={2} dot={{ r: 3 }} name="Manutenzione" />}
+                      {(filterTipo === "tutti" || filterTipo === "noleggio") && <Line type="monotone" dataKey="noleggio" stroke={EXPENSE_COLORS.noleggio} strokeWidth={2} dot={{ r: 3 }} name="Noleggio" />}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {view === "cdc" && (
+                <div style={{ background: C.card, borderRadius: 10, padding: 16, border: `1px solid ${C.border}` }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 16 }}>Spese per Centro di Costo</div>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={cdcData} margin={{ top: 5, right: 20, bottom: 60, left: 10 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                      <XAxis dataKey="cdc" tick={{ fill: C.dim, fontSize: 10 }} angle={-35} textAnchor="end" />
+                      <YAxis tick={{ fill: C.dim, fontSize: 11 }} />
+                      <Tooltip content={customTooltip} />
+                      <Legend />
+                      {(filterTipo === "tutti" || filterTipo === "carburante") && <Bar dataKey="carburante" stackId="a" fill={EXPENSE_COLORS.carburante} name="Carburante" />}
+                      {(filterTipo === "tutti" || filterTipo === "manutenzione") && <Bar dataKey="manutenzione" stackId="a" fill={EXPENSE_COLORS.manutenzione} name="Manutenzione" />}
+                      {(filterTipo === "tutti" || filterTipo === "noleggio") && <Bar dataKey="noleggio" stackId="a" fill={EXPENSE_COLORS.noleggio} name="Noleggio" radius={[4, 4, 0, 0]} />}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {view === "alert" && (
+                <div>
+                  {alerts.length === 0 ? (
+                    <div style={{ background: C.greenBg, border: `1px solid ${C.green}`, borderRadius: 10, padding: 24, textAlign: "center", color: C.green }}>
+                      ✅ Nessuna anomalia — tutte le spese nella norma (±20%)
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {alerts.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).map((al, i) => {
+                        const isHigh = al.severity === "high";
+                        return (
+                          <div key={i} style={{ background: isHigh ? C.redBg : C.orangeBg, border: `1px solid ${isHigh ? C.red : C.orange}`, borderRadius: 10, padding: 14 }}>
+                            <div style={{ fontWeight: 600, color: isHigh ? C.red : C.orange }}>
+                              {isHigh ? "🚨" : "⚠️"} {al.tipo} — {al.mese} ({al.delta.toFixed(1)}% vs media)
+                            </div>
+                            <div style={{ fontSize: 12, color: C.dim, marginTop: 6 }}>
+                              Importo: € {fmt(al.importo)} | Media: € {fmt(al.media)} | Scostamento: {al.delta > 0 ? "+" : ""}€ {fmt(al.importo - al.media)}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
