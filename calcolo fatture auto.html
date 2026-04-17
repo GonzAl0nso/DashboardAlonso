@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calcolo Fatture Veicoli</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useCallback, useRef } = React;
+
+    const FLEET = [
+      { targa: "FP781CW", cdc: "VEVIGONOVOCRC", tipo: "Autocarro", modello: "Fiat Ducato", assegnazione: "no" },
+      { targa: "GJ426VV", cdc: "VEHQSTR", tipo: "Autovettura", modello: "Tucson 1.6 CRDI 48V DCT XLine", assegnazione: "fringe benefit" },
+      { targa: "GL955PE", cdc: "VEJESOLOCRC", tipo: "Autovettura", modello: "OPEL Corsa 1.5 D 100 CV Edition", assegnazione: "fringe benefit" },
+      { targa: "GL960PE", cdc: "VEJESOLOCRC", tipo: "Autovettura", modello: "OPEL Corsa 1.5 D 100 CV Edition", assegnazione: "fringe benefit" },
+      { targa: "GM655PE", cdc: "VEVIGONOVOCRC", tipo: "Autovettura", modello: "OPEL Corsa 1.5 D 100 CV Edition", assegnazione: "fringe benefit" },
+      { targa: "GM965ZY", cdc: "VEHQAMM", tipo: "Autovettura", modello: "A4 Avant 30 Tdi 136 Cv", assegnazione: "fringe benefit" },
+      { targa: "GP433MR", cdc: "VEHQGES", tipo: "Autovettura", modello: "A4 Avant 30 Tdi 136 Cv", assegnazione: "fringe benefit" },
+      { targa: "GS784RK", cdc: "VEHQACQ", tipo: "Autovettura", modello: "KIA Xceed 1.6 Crdi 136 Cv", assegnazione: "fringe benefit" },
+      { targa: "GW527NN", cdc: "VEHQRIU", tipo: "Autovettura", modello: "Tonale 1.6 Diesel 130 Cv", assegnazione: "fringe benefit" },
+      { targa: "GY375AS", cdc: "VEHQSIC", tipo: "Autovettura", modello: "PEUGEOT 308 Bluehdi 130", assegnazione: "fringe benefit" },
+      { targa: "GZ850SP", cdc: "VEHQRFS", tipo: "Autovettura", modello: "KIA SPORTAGE 1.6 Crdi Mhev", assegnazione: "fringe benefit" },
+      { targa: "GZ851SP", cdc: "VEHQQGC", tipo: "Autovettura", modello: "KIA SPORTAGE 1.6 Crdi Mhev", assegnazione: "fringe benefit" },
+      { targa: "HA512AF", cdc: "VEHQAMM", tipo: "Autovettura", modello: "Renault Clio 100 CV 1.5 DCI", assegnazione: "fringe benefit" },
+      { targa: "HA970XA", cdc: "VEHQRIU", tipo: "Autovettura", modello: "DS 7 Bluehdi 130", assegnazione: "fringe benefit" },
+      { targa: "HB344BJ", cdc: "VEHQGES", tipo: "Autovettura", modello: "BMW X2 sDRIVE 18d", assegnazione: "fringe benefit" },
+      { targa: "HB370BJ", cdc: "VEHQDIR", tipo: "Autovettura", modello: "BMW X3 20D XDRIVE", assegnazione: "fringe benefit" },
+      { targa: "HB893TA", cdc: "VEHQAMM", tipo: "Autovettura", modello: "BMW X2 sDRIVE 18d", assegnazione: "fringe benefit" },
+      { targa: "HA360XA", cdc: "VEHQACQ", tipo: "Autovettura", modello: "Sportage 1.6 Crdi Mhev", assegnazione: "fringe benefit" },
+      { targa: "HA361XA", cdc: "VEHQSIC", tipo: "Autovettura", modello: "Sportage 1.6 Crdi Mhev", assegnazione: "fringe benefit" },
+      { targa: "HC520BK", cdc: "VEHQSTR", tipo: "Autovettura", modello: "Tiguan 2.0 Tdi 150 Cv", assegnazione: "fringe benefit" },
+    ];
+
+    const EXPENSE_TYPES = {
+      noleggio: {
+        label: "Noleggio",
+        autovettura: { ivaDetr: 0.40, costoDed: 0.70, contoDed: "030401004", contoInded: "030401009", voceDed: "03040100401", voceInded: "03040100901", descrDed: "Noleggio autovetture deducibile", descrInded: "Noleggio autovetture indeducibile" },
+        autocarro: { ivaDetr: 1.0, costoDed: 1.0, contoDed: "030401003", contoInded: null, voceDed: "03040100301", voceInded: null, descrDed: "Noleggio autocarri", descrInded: null },
+      },
+      carburante: {
+        label: "Carburante",
+        autovettura: { ivaDetr: 0.40, costoDed: 0.70, contoDed: "030203051", contoInded: "030203052", voceDed: "03020305101", voceInded: "03020305102", descrDed: "Carburante autovetture deducibili", descrInded: "Carburante autovetture indeducibili" },
+        autocarro: { ivaDetr: 1.0, costoDed: 1.0, contoDed: "030203050", contoInded: null, voceDed: "03020305001", voceInded: null, descrDed: "Carburante autocarri", descrInded: null },
+      },
+      manutenzione: {
+        label: "Manutenzione",
+        autovettura: { ivaDetr: 0.40, costoDed: 0.70, contoDed: "030203024", contoInded: "030203024", voceDed: "03020302401", voceInded: "03020302401", descrDed: "Manutenzione autovetture di terzi", descrInded: "Manutenzione autovetture (indeducibile)" },
+        autocarro: { ivaDetr: 1.0, costoDed: 1.0, contoDed: "030203023", contoInded: null, voceDed: "03020302301", voceInded: null, descrDed: "Manutenzione autocarri di terzi", descrInded: null },
+      },
+      assicurazione: {
+        label: "Assicurazione",
+        autovettura: { ivaDetr: 0, costoDed: 0.70, contoDed: "030203001", contoInded: "030203001", voceDed: "03020300101", voceInded: "03020300101", descrDed: "Assicurazioni (deducibile)", descrInded: "Assicurazioni (indeducibile)" },
+        autocarro: { ivaDetr: 0, costoDed: 1.0, contoDed: "030203001", contoInded: null, voceDed: "03020300101", voceInded: null, descrDed: "Assicurazioni", descrInded: null },
+      },
+    };
+
+    const fmt = n => new Intl.NumberFormat("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+    const fmt4 = n => new Intl.NumberFormat("it-IT", { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(n);
+    const fmtP = n => new Intl.NumberFormat("it-IT", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n);
+
+    function findV(targa) {
+      if (!targa) return null;
+      const c = targa.replace(/[\s\-\.]/g, "").toUpperCase();
+      return FLEET.find(v => v.targa.replace(/[\s\-\.]/g, "").toUpperCase() === c);
+    }
+
+    const C = {
+      bg: "#0C0E14", card: "#161923", cardAlt: "#1C2030", border: "#262B3D",
+      accent: "#4A7FFF", accentSoft: "#1E3A6E", green: "#2DD4A0", greenBg: "#0C2D24",
+      red: "#F06868", redBg: "#2D1515", yellow: "#F5C542", yellowBg: "#2D2510",
+      text: "#E4E8F1", dim: "#7D86A0", muted: "#4A5068",
+      mono: "'JetBrains Mono','Fira Code',monospace", sans: "'Inter','DM Sans',system-ui,sans-serif",
+    };
+
+    const iS = { width: "100%", padding: "10px 12px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, fontFamily: C.sans, fontSize: 14, outline: "none", boxSizing: "border-box" };
+
+    const Badge = ({ children, color = C.accent, bg = C.accentSoft }) => (
+      <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, color, background: bg, fontFamily: C.mono }}>{children}</span>
+    );
+
+    const AnTable = ({ data, voceDescr, totalFromPN }) => (
+      <div style={{ background: C.card, borderRadius: 10, padding: 16, border: `1px solid ${C.border}` }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 600 }}>MOVIMENTI DI ANALITICA — {voceDescr}</div>
+          <Badge>{data[0]?.voce}</Badge>
+        </div>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+          <thead><tr style={{ borderBottom: `2px solid ${C.border}` }}>
+            {["Voce C/R", "Centro di costo", "Parametro", "Percent.", "D/A", "Importo"].map(h => (
+              <th key={h} style={{ textAlign: ["Parametro", "Percent.", "Importo"].includes(h) ? "right" : "left", padding: "8px 10px", fontSize: 10, color: C.dim, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {data.map((r, i) => (
+              <tr key={i} style={{ borderBottom: `1px solid ${C.border}` }}>
+                <td style={{ padding: "10px", fontFamily: C.mono, fontSize: 11, color: C.accent }}>{r.voce}</td>
+                <td style={{ padding: "10px", fontFamily: C.mono, fontSize: 12 }}>{r.cdc}</td>
+                <td style={{ padding: "10px", textAlign: "right", fontFamily: C.mono, fontSize: 12 }}>{fmt4(r.param)}</td>
+                <td style={{ padding: "10px", textAlign: "right", fontFamily: C.mono, fontSize: 12 }}>{fmtP(r.pct)}</td>
+                <td style={{ padding: "10px", textAlign: "center" }}><Badge color={C.green} bg={C.greenBg}>D</Badge></td>
+                <td style={{ padding: "10px", textAlign: "right", fontFamily: C.mono, fontWeight: 600 }}>{fmt(r.imp)}</td>
+              </tr>
+            ))}
+            <tr style={{ borderTop: `2px solid ${C.accent}`, fontWeight: 700 }}>
+              <td colSpan={5} style={{ padding: "10px" }}>TOTALE</td>
+              <td style={{ padding: "10px", textAlign: "right", fontFamily: C.mono }}>{fmt(data.reduce((s, r) => s + r.imp, 0))}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div style={{ marginTop: 10, padding: "7px 12px", borderRadius: 6, fontSize: 12, background: C.bg, color: C.dim }}>
+          Da primanota: € {fmt(totalFromPN)} — Differenza: € {fmt(Math.abs(totalFromPN - data.reduce((s, r) => s + r.imp, 0)))}
+        </div>
+      </div>
+    );
+
+    function App() {
+      const [step, setStep] = useState("upload");
+      const [file, setFile] = useState(null);
+      const [ocrLoading, setOcrLoading] = useState(false);
+      const [ocrError, setOcrError] = useState(null);
+      const [invoiceData, setInvoiceData] = useState(null);
+      const [tipoSpesa, setTipoSpesa] = useState("noleggio");
+      const [totImp, setTotImp] = useState("");
+      const [totIva, setTotIva] = useState("");
+      const [commissioni, setCommissioni] = useState("3.00");
+      const [codIva, setCodIva] = useState("D2240");
+      const [fornitore, setFornitore] = useState("");
+      const [codForn, setCodForn] = useState("0000000748");
+      const [lines, setLines] = useState([]);
+      const [result, setResult] = useState(null);
+      const [dragO, setDragO] = useState(false);
+      const [tab, setTab] = useState("primanota");
+      const fRef = useRef(null);
+
+      const handleFile = useCallback(f => {
+        if (!f) return;
+        setFile(f); setOcrError(null); setInvoiceData(null); setResult(null); setStep("ocr"); runOCR(f);
+      }, []);
+
+      async function runOCR(f) {
+        setOcrLoading(true); setOcrError(null);
+        try {
+          const b64 = await new Promise((res, rej) => {
+            const r = new FileReader();
+            r.onload = () => res(r.result.split(",")[1]);
+            r.onerror = () => rej(new Error("Read error"));
+            r.readAsDataURL(f);
+          });
+          const mt = f.type === "application/pdf" ? "application/pdf" : f.type.startsWith("image/") ? f.type : "image/jpeg";
+          const cb = mt === "application/pdf"
+            ? { type: "document", source: { type: "base64", media_type: mt, data: b64 } }
+            : { type: "image", source: { type: "base64", media_type: mt, data: b64 } };
+
+          const resp = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "claude-sonnet-4-20250514",
+              max_tokens: 1000,
+              messages: [{
+                role: "user",
+                content: [cb, {
+                  type: "text",
+                  text: `Analizza questa fattura veicoli e restituisci SOLO JSON (no backtick/markdown):{"fornitore":"","codice_fornitore":"","numero_fattura":"","data_fattura":"GG/MM/AAAA","codice_iva":"","totale_imponibile":0,"totale_imposta":0,"totale_documento":0,"commissioni":0,"spese_incasso":0,"righe":[{"targa":"","descrizione":"","canone":0,"assicurazione":0,"totale_riga":0}]}. Cerca: 1) tutte le targhe italiane, 2) voce "Spese Incasso" o "Commissioni" o simili (di solito ~3-4 euro) - estrai l'importo esatto, 3) commissioni di pagamento separate se presenti. Campi non leggibili = 0.`
+                }]
+              }]
+            }),
+          });
+
+          const data = await resp.json();
+          const text = data.content?.map(c => c.text || "").join("") || "";
+          const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
+          setInvoiceData(parsed);
+          if (parsed.fornitore) setFornitore(parsed.fornitore);
+          if (parsed.codice_fornitore) setCodForn(parsed.codice_fornitore);
+          if (parsed.totale_imponibile) setTotImp(String(parsed.totale_imponibile));
+          if (parsed.totale_imposta) setTotIva(String(parsed.totale_imposta));
+          if (parsed.codice_iva) setCodIva(parsed.codice_iva);
+          const comm = parsed.spese_incasso || parsed.commissioni || 3.00;
+          if (comm > 0) setCommissioni(String(comm));
+          if (parsed.righe?.length > 0) {
+            setLines(parsed.righe.map((r, i) => ({
+              id: i,
+              targa: findV(r.targa)?.targa || r.targa || "",
+              canone: r.canone || 0,
+              assic: r.assicurazione || 0,
+              tot: r.totale_riga || (r.canone || 0) + (r.assicurazione || 0)
+            })));
+          }
+          setStep("review");
+        } catch (err) {
+          setOcrError(err.message || "Errore OCR");
+          setStep("review");
+        } finally {
+          setOcrLoading(false);
+        }
+      }
+
+      function updLine(id, field, val) {
+        setLines(prev => prev.map(l => {
+          if (l.id !== id) return l;
+          const u = { ...l, [field]: val };
+          if (field === "canone" || field === "assic") u.tot = (parseFloat(u.canone) || 0) + (parseFloat(u.assic) || 0);
+          return u;
+        }));
+      }
+
+      function compute() {
+        const imp = parseFloat(totImp) || 0, iva = parseFloat(totIva) || 0, comm = parseFloat(commissioni) || 0, tot = imp + iva + comm;
+        if (imp === 0 || lines.length === 0) return;
+
+        const totalRighe = lines.reduce((s, x) => s + x.tot, 0);
+
+        const resolved = lines.filter(l => l.tot > 0).map(l => {
+          const v = findV(l.targa);
+          if (!v) return null;
+          const tv = v.tipo.toLowerCase() === "autocarro" ? "autocarro" : "autovettura";
+          const ru = EXPENSE_TYPES[tipoSpesa]?.[tv];
+          if (!ru) return null;
+          const ratio = totalRighe > 0 ? l.tot / totalRighe : 0;
+          const vImp = imp * ratio, vIva = iva * ratio;
+          const ivaDet = vIva * ru.ivaDetr, ivaIndet = vIva - ivaDet;
+          const baseCosto = vImp + ivaIndet;
+          const cDed = baseCosto * ru.costoDed, cInded = baseCosto - cDed;
+          return { ...l, v, tv, ru, vImp, vIva, ivaDet, ivaIndet, cDed, cInded, ratio };
+        }).filter(Boolean);
+
+        if (resolved.length === 0) return;
+
+        const tIvaDet = resolved.reduce((s, r) => s + r.ivaDet, 0);
+        const tCDed = resolved.reduce((s, r) => s + r.cDed, 0);
+        const tCInded = resolved.reduce((s, r) => s + r.cInded, 0);
+        const ru = resolved[0].ru;
+
+        const pn = [];
+        pn.push({ r: 1, t: "F", conto: codForn.padStart(10, "0"), descr: fornitore || "Fornitore", dare: 0, avere: tot });
+        if (tCDed > 0) pn.push({ r: 2, t: "G", conto: ru.contoDed, descr: ru.descrDed, dare: tCDed, avere: 0 });
+        if (tCInded > 0.005) pn.push({ r: 3, t: "G", conto: ru.contoInded, descr: ru.descrInded, dare: tCInded, avere: 0 });
+        if (tIvaDet > 0.005) pn.push({ r: 4, t: "G", conto: "010503001", descr: "Crediti IVA", dare: tIvaDet, avere: 0 });
+        if (comm > 0.005) pn.push({ r: 5, t: "G", conto: "030203046", descr: "Spese incasso accessorie fornitori", dare: comm, avere: 0 });
+
+        const buildAn = (voce, vDescr, amountKey) => {
+          const byCdc = {};
+          for (const r of resolved) {
+            const k = r.v.cdc;
+            if (!byCdc[k]) byCdc[k] = { cdc: k, amt: 0, targhe: [] };
+            byCdc[k].amt += r[amountKey];
+            byCdc[k].targhe.push(r.targa);
+          }
+          const list = Object.values(byCdc).filter(c => c.amt > 0.005);
+          const sum = list.reduce((s, c) => s + c.amt, 0);
+          return list.map(c => ({ voce, vDescr, cdc: c.cdc, param: sum > 0 ? c.amt / sum : 0, pct: sum > 0 ? (c.amt / sum) * 100 : 0, imp: c.amt, targhe: c.targhe }));
+        };
+
+        const anDed = ru.voceDed ? buildAn(ru.voceDed, ru.descrDed, "cDed") : [];
+        const anInded = ru.voceInded ? buildAn(ru.voceInded, ru.descrInded, "cInded") : [];
+
+        setResult({ pn, anDed, anInded, resolved, tot, imp, iva, tIvaDet, tCDed, tCInded, codIva, ru, comm });
+        setStep("result");
+      }
+
+      function reset() {
+        setStep("upload"); setFile(null); setInvoiceData(null); setResult(null);
+        setOcrError(null); setTotImp(""); setTotIva(""); setLines([]);
+        setFornitore(""); setCodForn("0000000748"); setCommissioni("3.00"); setTab("primanota");
+      }
+
+      const STEPS = ["upload", "ocr", "review", "result"];
+
+      return (
+        <div style={{ fontFamily: C.sans, background: C.bg, minHeight: "100vh", color: C.text, padding: "20px 12px" }}>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } } select option { background: #161923; }`}</style>
+
+          <div style={{ maxWidth: 900, margin: "0 auto 20px", display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: `linear-gradient(135deg, ${C.accent}, #6C3AED)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>🚗</div>
+            <div>
+              <div style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-0.03em" }}>Calcolo Fatture Veicoli</div>
+              <div style={{ margin: 0, fontSize: 12, color: C.dim }}>Peralba — Primanota + Analitica per CdC</div>
+            </div>
+          </div>
+
+          <div style={{ maxWidth: 900, margin: "0 auto 20px" }}>
+            <div style={{ display: "flex", gap: 2 }}>
+              {STEPS.map((s, i) => (
+                <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: STEPS.indexOf(step) >= i ? C.accent : C.border, transition: "background 0.4s" }} />
+              ))}
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5 }}>
+              {["Upload", "OCR", "Verifica", "Registrazione"].map((l, i) => (
+                <span key={i} style={{ fontSize: 10, color: STEPS.indexOf(step) >= i ? C.text : C.muted, fontWeight: STEPS.indexOf(step) >= i ? 600 : 400 }}>{l}</span>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ maxWidth: 900, margin: "0 auto" }}>
+            {step === "upload" && (
+              <div onDragOver={e => { e.preventDefault(); setDragO(true); }} onDragLeave={() => setDragO(false)} onDrop={e => { e.preventDefault(); setDragO(false); handleFile(e.dataTransfer.files[0]); }} onClick={() => fRef.current?.click()}
+                style={{ background: dragO ? C.cardAlt : C.card, border: `2px dashed ${dragO ? C.accent : C.border}`, borderRadius: 16, padding: "56px 24px", textAlign: "center", cursor: "pointer", transition: "all 0.2s" }}
+              >
+                <div style={{ fontSize: 44, marginBottom: 12, opacity: 0.6 }}>📄</div>
+                <p style={{ fontSize: 16, fontWeight: 600, margin: "0 0 6px" }}>Trascina qui la fattura</p>
+                <p style={{ fontSize: 13, color: C.dim, margin: 0 }}>PDF o immagine (JPG, PNG)</p>
+                <input ref={fRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" style={{ display: "none" }} onChange={e => handleFile(e.target.files[0])} />
+              </div>
+            )}
+
+            {step === "ocr" && ocrLoading && (
+              <div style={{ background: C.card, borderRadius: 16, padding: "56px 24px", textAlign: "center", border: `1px solid ${C.border}` }}>
+                <div style={{ width: 48, height: 48, margin: "0 auto 16px", border: `3px solid ${C.border}`, borderTopColor: C.accent, borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+                <p style={{ fontSize: 15, fontWeight: 600, margin: "0 0 4px" }}>Analisi fattura in corso...</p>
+                <p style={{ fontSize: 12, color: C.dim, margin: 0 }}>OCR su «{file?.name}»</p>
+              </div>
+            )}
+
+            {step === "review" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                {ocrError && (
+                  <div style={{ background: C.redBg, border: `1px solid ${C.red}`, borderRadius: 10, padding: 14, fontSize: 13 }}>
+                    <strong style={{ color: C.red }}>⚠️ Errore OCR:</strong> {ocrError}
+                  </div>
+                )}
+                {invoiceData && (
+                  <div style={{ background: C.card, borderRadius: 10, padding: 16, border: `1px solid ${C.border}` }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: C.accent, marginBottom: 10 }}>📑 DATI ESTRATTI</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px 20px", fontSize: 13 }}>
+                      <div><span style={{ color: C.dim }}>Fornitore: </span>{invoiceData.fornitore || "—"}</div>
+                      <div><span style={{ color: C.dim }}>N. Doc: </span>{invoiceData.numero_fattura || "—"}</div>
+                      <div><span style={{ color: C.dim }}>Data: </span>{invoiceData.data_fattura || "—"}</div>
+                      <div><span style={{ color: C.dim }}>Imponibile: </span>€ {fmt(invoiceData.totale_imponibile || 0)}</div>
+                      <div><span style={{ color: C.dim }}>IVA: </span>€ {fmt(invoiceData.totale_imposta || 0)}</div>
+                      <div><span style={{ color: C.dim }}>Totale: </span><strong>€ {fmt(invoiceData.totale_documento || 0)}</strong></div>
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ background: C.card, borderRadius: 10, padding: 16, border: `1px solid ${C.border}` }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 12 }}>✏️ DATI FATTURA</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                    <div>
+                      <label style={{ fontSize: 11, color: C.dim, display: "block", marginBottom: 3 }}>Tipo spesa</label>
+                      <select value={tipoSpesa} onChange={e => setTipoSpesa(e.target.value)} style={iS}>
+                        {Object.entries(EXPENSE_TYPES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, color: C.dim, display: "block", marginBottom: 3 }}>Fornitore</label>
+                      <input value={fornitore} onChange={e => setFornitore(e.target.value)} style={iS} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, color: C.dim, display: "block", marginBottom: 3 }}>Cod. Fornitore</label>
+                      <input value={codForn} onChange={e => setCodForn(e.target.value)} style={{ ...iS, fontFamily: C.mono }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, color: C.dim, display: "block", marginBottom: 3 }}>Imponibile (€)</label>
+                      <input type="number" step="0.01" value={totImp} onChange={e => setTotImp(e.target.value)} style={{ ...iS, fontFamily: C.mono }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, color: C.dim, display: "block", marginBottom: 3 }}>IVA (€)</label>
+                      <input type="number" step="0.01" value={totIva} onChange={e => setTotIva(e.target.value)} style={{ ...iS, fontFamily: C.mono }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, color: C.dim, display: "block", marginBottom: 3 }}>Commissioni (€)</label>
+                      <input type="number" step="0.01" value={commissioni} onChange={e => setCommissioni(e.target.value)} style={{ ...iS, fontFamily: C.mono }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, color: C.dim, display: "block", marginBottom: 3 }}>Cod. IVA</label>
+                      <input value={codIva} onChange={e => setCodIva(e.target.value)} style={{ ...iS, fontFamily: C.mono }} />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ background: C.card, borderRadius: 10, padding: 16, border: `1px solid ${C.border}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600 }}>🚗 DETTAGLIO PER VEICOLO</div>
+                    <button onClick={() => setLines(p => [...p, { id: Date.now(), targa: "", canone: 0, assic: 0, tot: 0 }])} style={{ background: C.accentSoft, color: C.accent, border: "none", borderRadius: 6, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>+ Aggiungi</button>
+                  </div>
+                  {lines.map((l, idx) => {
+                    const v = findV(l.targa);
+                    return (
+                      <div key={l.id} style={{ display: "flex", gap: 8, alignItems: "flex-end", marginBottom: 8, padding: "8px 10px", background: C.bg, borderRadius: 8, flexWrap: "wrap" }}>
+                        <div style={{ flex: "2 1 160px" }}>
+                          {idx === 0 && <label style={{ fontSize: 10, color: C.dim, display: "block", marginBottom: 2 }}>Targa</label>}
+                          <select value={v ? v.targa : ""} onChange={e => updLine(l.id, "targa", e.target.value)} style={{ ...iS, fontSize: 12, padding: "7px 8px" }}>
+                            <option value="">— Seleziona —</option>
+                            {FLEET.map(f => <option key={f.targa} value={f.targa}>{f.targa} — {f.modello}</option>)}
+                          </select>
+                        </div>
+                        <div style={{ flex: "1 1 80px" }}>
+                          {idx === 0 && <label style={{ fontSize: 10, color: C.dim, display: "block", marginBottom: 2 }}>Canone</label>}
+                          <input type="number" step="0.01" value={l.canone || ""} onChange={e => updLine(l.id, "canone", parseFloat(e.target.value) || 0)} style={{ ...iS, fontSize: 12, padding: "7px 8px", fontFamily: C.mono }} />
+                        </div>
+                        <div style={{ flex: "1 1 80px" }}>
+                          {idx === 0 && <label style={{ fontSize: 10, color: C.dim, display: "block", marginBottom: 2 }}>Assicur.</label>}
+                          <input type="number" step="0.01" value={l.assic || ""} onChange={e => updLine(l.id, "assic", parseFloat(e.target.value) || 0)} style={{ ...iS, fontSize: 12, padding: "7px 8px", fontFamily: C.mono }} />
+                        </div>
+                        <div style={{ width: 80, textAlign: "right" }}>
+                          {idx === 0 && <label style={{ fontSize: 10, color: C.dim, display: "block", marginBottom: 2 }}>Totale</label>}
+                          <div style={{ fontFamily: C.mono, fontSize: 13, fontWeight: 600, padding: "7px 0" }}>€ {fmt(l.tot)}</div>
+                        </div>
+                        <div style={{ width: 90, textAlign: "center" }}>
+                          {idx === 0 && <label style={{ fontSize: 10, color: C.dim, display: "block", marginBottom: 2 }}>CdC</label>}
+                          <div style={{ fontSize: 9, fontFamily: C.mono, color: v ? C.green : C.muted, padding: "7px 0", wordBreak: "break-all" }}>{v ? v.cdc : "—"}</div>
+                        </div>
+                        <button onClick={() => setLines(p => p.filter(x => x.id !== l.id))} style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", fontSize: 16, padding: "4px" }}>✕</button>
+                      </div>
+                    );
+                  })}
+                  {lines.length > 0 && (
+                    <div style={{ display: "flex", justifyContent: "flex-end", padding: "8px 10px", fontSize: 13 }}>
+                      <span style={{ color: C.dim, marginRight: 8 }}>Totale righe:</span>
+                      <span style={{ fontFamily: C.mono, fontWeight: 700 }}>€ {fmt(lines.reduce((s, l) => s + l.tot, 0))}</span>
+                    </div>
+                  )}
+                </div>
+
+                <button onClick={compute} disabled={lines.length === 0 || !totImp} style={{ padding: "14px", border: "none", borderRadius: 10, background: (lines.length === 0 || !totImp) ? C.muted : `linear-gradient(135deg, ${C.accent}, #6C3AED)`, color: "#fff", fontSize: 15, fontWeight: 600, cursor: (lines.length === 0 || !totImp) ? "not-allowed" : "pointer", fontFamily: C.sans }}>
+                  Genera Registrazione
+                </button>
+              </div>
+            )}
+
+            {step === "result" && result && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div style={{ background: C.card, borderRadius: 10, padding: 16, border: `1px solid ${C.border}` }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: C.green, marginBottom: 12 }}>✅ RIEPILOGO FISCALE</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                    {[
+                      { l: "Totale documento", v: `€ ${fmt(result.tot)}`, s: `Imp. ${fmt(result.imp)} + IVA ${fmt(result.iva)} + Comm. ${fmt(result.comm)}` },
+                      { l: "IVA detraibile", v: `€ ${fmt(result.tIvaDet)}`, s: `${(result.ru.ivaDetr * 100).toFixed(0)}% di € ${fmt(result.iva)}`, c: C.green },
+                      { l: "IVA indetraibile", v: `€ ${fmt(result.iva - result.tIvaDet)}`, s: "→ incrementa il costo", c: C.red },
+                      { l: "Costo deducibile", v: `€ ${fmt(result.tCDed)}`, s: `${(result.ru.costoDed * 100).toFixed(0)}% del costo`, c: C.green },
+                      { l: "Costo indeducibile", v: `€ ${fmt(result.tCInded)}`, s: `${((1 - result.ru.costoDed) * 100).toFixed(0)}% del costo`, c: C.red },
+                      { l: "Commissioni", v: `€ ${fmt(result.comm)}`, s: "100% deducibili", c: C.yellow },
+                    ].map((x, i) => (
+                      <div key={i} style={{ background: C.bg, borderRadius: 8, padding: 12 }}>
+                        <div style={{ fontSize: 11, color: C.dim, marginBottom: 4 }}>{x.l}</div>
+                        <div style={{ fontSize: 16, fontWeight: 700, fontFamily: C.mono, color: x.c || C.text }}>{x.v}</div>
+                        <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{x.s}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: 2, background: C.card, borderRadius: 10, padding: 3, border: `1px solid ${C.border}` }}>
+                  {[{ k: "primanota", l: "📒 Primanota" }, { k: "anDed", l: "📊 Analitica Ded." }, { k: "anInded", l: "📊 Analitica Inded." }].map(t => (
+                    <button key={t.k} onClick={() => setTab(t.k)} style={{ flex: 1, padding: "10px 8px", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 600, background: tab === t.k ? C.accent : "transparent", color: tab === t.k ? "#fff" : C.dim, cursor: "pointer", fontFamily: C.sans, transition: "all 0.2s" }}>{t.l}</button>
+                  ))}
+                </div>
+
+                {tab === "primanota" && (
+                  <div style={{ background: C.card, borderRadius: 10, padding: 16, border: `1px solid ${C.border}` }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 12 }}>PRIMANOTA CONTABILE</div>
+                    <div style={{ overflowX: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                        <thead><tr style={{ borderBottom: `2px solid ${C.border}` }}>
+                          {["Riga", "Tipo", "Conto", "Descrizione", "DARE", "AVERE", "Partite"].map(h => (
+                            <th key={h} style={{ textAlign: ["DARE", "AVERE"].includes(h) ? "right" : "left", padding: "8px 10px", fontSize: 10, color: C.dim, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>{h}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>
+                          {result.pn.map((r, i) => (
+                            <tr key={i} style={{ borderBottom: `1px solid ${C.border}` }}>
+                              <td style={{ padding: "10px", fontFamily: C.mono, fontSize: 12, color: C.dim }}>{r.r}</td>
+                              <td style={{ padding: "10px" }}><Badge color={r.t === "F" ? C.yellow : C.accent} bg={r.t === "F" ? C.yellowBg : C.accentSoft}>{r.t}</Badge></td>
+                              <td style={{ padding: "10px", fontFamily: C.mono, fontSize: 12, color: C.accent }}>{r.conto}</td>
+                              <td style={{ padding: "10px" }}>{r.descr}</td>
+                              <td style={{ padding: "10px", textAlign: "right", fontFamily: C.mono, color: r.dare > 0 ? C.text : C.muted }}>{r.dare > 0 ? fmt(r.dare) : "0,00"}</td>
+                              <td style={{ padding: "10px", textAlign: "right", fontFamily: C.mono, color: r.avere > 0 ? C.text : C.muted }}>{r.avere > 0 ? fmt(r.avere) : "0,00"}</td>
+                              <td style={{ padding: "10px", fontFamily: C.mono, fontSize: 11, color: C.dim }}>{r.t === "F" ? "C" : "N"}</td>
+                            </tr>
+                          ))}
+                          <tr style={{ borderTop: `2px solid ${C.accent}`, fontWeight: 700 }}>
+                            <td colSpan={4} style={{ padding: "10px" }}>SALDO</td>
+                            <td style={{ padding: "10px", textAlign: "right", fontFamily: C.mono }}>{fmt(result.pn.reduce((s, r) => s + r.dare, 0))}</td>
+                            <td style={{ padding: "10px", textAlign: "right", fontFamily: C.mono }}>{fmt(result.pn.reduce((s, r) => s + r.avere, 0))}</td>
+                            <td />
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    {(() => {
+                      const d = result.pn.reduce((s, r) => s + r.dare, 0), a = result.pn.reduce((s, r) => s + r.avere, 0), ok = Math.abs(d - a) < 0.02;
+                      return <div style={{ marginTop: 10, padding: "7px 12px", borderRadius: 6, fontSize: 12, background: ok ? C.greenBg : C.redBg, border: `1px solid ${ok ? C.green : C.red}`, color: ok ? C.green : C.red }}>{ok ? "✅ Sbilancio: 0,00" : `⚠️ Sbilancio: € ${fmt(Math.abs(d - a))}`}</div>;
+                    })()}
+                  </div>
+                )}
+
+                {tab === "anDed" && result.anDed.length > 0 && <AnTable data={result.anDed} voceDescr={result.ru.descrDed} totalFromPN={result.tCDed} />}
+                {tab === "anDed" && result.anDed.length === 0 && <div style={{ padding: 20, textAlign: "center", color: C.dim, fontSize: 13 }}>Nessun dato analitica deducibile</div>}
+                {tab === "anInded" && result.anInded.length > 0 && <AnTable data={result.anInded} voceDescr={result.ru.descrInded} totalFromPN={result.tCInded} />}
+                {tab === "anInded" && result.anInded.length === 0 && <div style={{ padding: 20, textAlign: "center", color: C.dim, fontSize: 13 }}>Nessun costo indeducibile</div>}
+
+                <div style={{ background: C.card, borderRadius: 10, padding: 14, border: `1px solid ${C.border}`, fontSize: 12, color: C.dim, lineHeight: 1.7 }}>
+                  <strong style={{ color: C.yellow }}>📌 Riferimenti normativi</strong>
+                  <div style={{ marginTop: 8 }}>
+                    <p style={{ margin: "4px 0" }}>• IVA detraibile al 40% — art. 19-bis1 lett. c) DPR 633/72</p>
+                    <p style={{ margin: "4px 0" }}>• Costo deducibile al 70% — art. 164 c.1 lett. b-bis) TUIR</p>
+                    <p style={{ margin: "4px 0" }}>• IVA indetraibile (60%) incrementa il costo da ripartire</p>
+                    <p style={{ margin: "4px 0" }}>• Commissioni 100% deducibili — conto 030203046</p>
+                  </div>
+                </div>
+
+                <button onClick={reset} style={{ padding: "14px", border: `1px solid ${C.border}`, borderRadius: 10, background: "transparent", color: C.text, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: C.sans }}>← Nuova fattura</button>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
