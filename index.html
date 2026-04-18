@@ -517,7 +517,12 @@
 
     function mountAnalytics() {
       const container = document.getElementById('analitiche-root');
-      if (!container || !window.AnalyticsApp) return;
+      if (!container) return;
+      if (!window.AnalyticsApp) {
+        // Babel non ha ancora compilato il componente — riprova tra 300ms
+        setTimeout(mountAnalytics, 300);
+        return;
+      }
       if (!analyticsRoot) {
         analyticsRoot = ReactDOM.createRoot(container);
         analyticsRoot.render(React.createElement(window.AnalyticsApp));
@@ -797,8 +802,6 @@
   <!-- ===== REACT: SEZIONE ANALITICHE ===== -->
   <script type="text/babel">
     const { useState, useEffect, useCallback } = React;
-    const { LineChart, Line, BarChart, Bar, XAxis, YAxis,
-            CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts;
 
     const C = {
       bg: "#0A0E1A", card: "#141926", border: "#252D42",
@@ -863,6 +866,12 @@
     }
 
     function AnalyticsApp() {
+      // Recharts caricato a runtime — destructuring qui per evitare race condition con CDN
+      const R = window.Recharts || {};
+      const LineChart = R.LineChart, Line = R.Line, BarChart = R.BarChart, Bar = R.Bar;
+      const XAxis = R.XAxis, YAxis = R.YAxis, CartesianGrid = R.CartesianGrid;
+      const Tooltip = R.Tooltip, Legend = R.Legend, ResponsiveContainer = R.ResponsiveContainer;
+
       const [data, setData] = useState([]);
       const [loading, setLoading] = useState(false);
       const [autoLoading, setAutoLoading] = useState(true);
