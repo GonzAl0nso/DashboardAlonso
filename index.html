@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Peralba Admin Dashboard</title>
+
+  <!-- React + Recharts per sezione Analitiche -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/recharts@2.10.3/dist/Recharts.js"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0A0E1A;
+      color: #E8ECFA;
+      font-family: 'Inter', 'DM Sans', system-ui, sans-serif;
+      line-height: 1.6;
+    }
+    nav {
+      background: #141926;
+      border-bottom: 1px solid #252D42;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    nav .left { display: flex; align-items: center; gap: 12px; }
+    nav .logo {
+      width: 40px; height: 40px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #4A7FFF, #185FA5);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 20px; font-weight: 700;
+    }
+    nav .title { font-size: 16px; font-weight: 700; }
+    nav .subtitle { font-size: 11px; color: #8694B0; }
+    nav .user { font-size: 12px; color: #8694B0; }
+    nav .fleet-status { font-size: 10px; padding: 3px 8px; border-radius: 6px; font-weight: 600; }
+    nav .fleet-ok { background: #0C2D24; color: #2DD4A0; }
+    nav .fleet-err { background: #2D2510; color: #F5C542; }
+
+    .container { padding: 32px 24px; max-width: 1200px; margin: 0 auto; }
+    h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    h2 { font-size: 24px; font-weight: 700; margin-bottom: 20px; }
+    .subtitle-text { color: #8694B0; font-size: 14px; margin-bottom: 32px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .tool-card {
+      background: #141926;
+      border: 1px solid #252D42;
+      border-radius: 12px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex; flex-direction: column;
+      align-items: center; text-align: center; gap: 12px;
+    }
+    .tool-card:hover { border-color: #4A7FFF; transform: translateY(-2px); }
+    .tool-card .icon { font-size: 40px; }
+    .tool-card .name { font-size: 15px; font-weight: 600; }
+    .tool-card .desc { font-size: 12px; color: #8694B0; line-height: 1.5; }
+    .tool-card.disabled { opacity: 0.5; cursor: not-allowed; }
+    .tool-card.disabled:hover { border-color: #252D42; transform: none; }
+
+    .badge-soon { display: inline-block; padding: 2px 8px; background: #2D2510; color: #F5C542; border-radius: 6px; font-size: 10px; font-weight: 600; }
+    .badge-ready { display: inline-block; padding: 2px 8px; background: #0C2D24; color: #2DD4A0; border-radius: 6px; font-size: 10px; font-weight: 600; }
+
+    .back-btn {
+      margin-bottom: 20px; padding: 8px 16px;
+      border: 1px solid #252D42; background: transparent;
+      color: #4A7FFF; border-radius: 8px; cursor: pointer;
+      font-size: 13px; font-weight: 600; transition: all 0.2s;
+    }
+    .back-btn:hover { border-color: #4A7FFF; }
+
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label { font-size: 11px; color: #8694B0; display: block; margin-bottom: 6px; }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%; padding: 10px 12px;
+      background: #0A0E1A; border: 1px solid #252D42;
+      border-radius: 8px; color: #E8ECFA;
+      font-family: inherit; font-size: 14px; outline: none;
+    }
+    .form-group input:focus, .form-group select:focus { border-color: #4A7FFF; }
+
+    .card { background: #141926; border: 1px solid #252D42; border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+    .card-title { font-size: 12px; font-weight: 600; color: #2DD4A0; margin-bottom: 12px; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+    .upload-zone {
+      background: #141926; border: 2px dashed #4A7FFF;
+      border-radius: 12px; padding: 24px; text-align: center;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .upload-zone:hover { background: #1A2235; }
+    .upload-zone .icon { font-size: 32px; margin-bottom: 12px; }
+    .upload-zone .title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .upload-zone .hint { font-size: 12px; color: #8694B0; }
+
+    .hidden { display: none; }
+
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+    .badge-yellow { background: #2D2510; color: #F5C542; }
+    .badge-blue { background: #1F3A7D; color: #4A7FFF; }
+
+    .btn {
+      padding: 10px 16px; border: 1px solid #252D42;
+      background: transparent; color: #E8ECFA; border-radius: 8px;
+      cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s;
+    }
+    .btn:hover { border-color: #4A7FFF; color: #4A7FFF; }
+    .btn.primary { background: linear-gradient(135deg, #4A7FFF, #185FA5); border: none; color: #fff; }
+    .btn.primary:hover { opacity: 0.9; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .row { margin-bottom: 8px; display: grid; grid-template-columns: 1fr 1fr 1fr 80px 1fr auto; gap: 8px; align-items: end; }
+    .row input { width: 100%; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    table th { text-align: left; padding: 8px 10px; font-size: 10px; color: #8694B0; font-weight: 600; text-transform: uppercase; border-bottom: 2px solid #252D42; }
+    table td { padding: 8px 10px; border-bottom: 1px solid #252D42; }
+    table .mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 11px; }
+    table .accent { color: #4A7FFF; }
+    table .dim { color: #8694B0; }
+
+    .stat-box { background: #0A0E1A; border-radius: 8px; padding: 12px; }
+    .stat-label { font-size: 11px; color: #8694B0; margin-bottom: 4px; }
+    .stat-value { font-size: 16px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+    .stat-hint { font-size: 10px; color: #5A6885; margin-top: 2px; }
+
+    .tabs { display: flex; gap: 2px; background: #141926; border-radius: 10px; padding: 3px; border: 1px solid #252D42; margin-bottom: 14px; }
+    .tab-btn { flex: 1; padding: 10px 8px; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; background: transparent; color: #8694B0; cursor: pointer; transition: all 0.2s; }
+    .tab-btn.active { background: #4A7FFF; color: #fff; }
+
+    .error-box { background: #2D1515; border: 1px solid #F06868; border-radius: 12px; padding: 12px; color: #F06868; font-size: 12px; margin-bottom: 14px; }
+    .success-box { background: #0C2D24; border: 1px solid #2DD4A0; border-radius: 12px; padding: 12px; color: #2DD4A0; font-size: 12px; margin-bottom: 14px; }
+    .loading { text-align: center; padding: 20px; color: #8694B0; }
+
+    .construction { background: #141926; border-radius: 12px; padding: 32px; text-align: center; border: 1px dashed #252D42; }
+    .construction .icon { font-size: 48px; margin-bottom: 16px; }
+    .construction h3 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+    .construction p { color: #8694B0; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="left">
+      <div class="logo">P</div>
+      <div>
+        <div class="title">Peralba Admin</div>
+        <div class="subtitle">Contabilità &amp; Finanza</div>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <span id="fleet-badge" class="fleet-status fleet-ok" style="display:none;"></span>
+      <span class="user">Gonzalo — Responsabile AFC</span>
+    </div>
+  </nav>
+
+  <div class="container">
+
+    <!-- HOME -->
+    <div id="home" class="section active">
+      <h1>Dashboard Amministrativa</h1>
+      <p class="subtitle-text">Gestione centralizzata di contabilità, fiscalità e rendiconti</p>
+      <div class="grid">
+        <div class="tool-card" onclick="showSection('fatture-auto')">
+          <div class="icon">📋</div>
+          <div class="name">Calcolo Fatture</div>
+          <div class="desc">Registrazione fatture automezzi con split IVA e costi</div>
+          <span class="badge-ready">✓ Attivo</span>
+        </div>
+        <div class="tool-card" onclick="showSection('analitiche')">
+          <div class="icon">📈</div>
+          <div class="name">Analitiche</div>
+          <div class="desc">Visualizzazione costi per centro di costo con grafici</div>
+          <span class="badge-ready">✓ Attivo</span>
+        </div>
+        <div class="tool-card disabled">
+          <div class="icon">📊</div>
+          <div class="name">IVA Split</div>
+          <div class="desc">Gestione pro-rata e deducibilità IVA mista</div>
+          <span class="badge-soon">Prossimamente</span>
+        </div>
+        <div class="tool-card disabled">
+          <div class="icon">📄</div>
+          <div class="name">Rendiconti</div>
+          <div class="desc">Rendiconti mensili per strutture</div>
+          <span class="badge-soon">Prossimamente</span>
+        </div>
+        <div class="tool-card disabled">
+          <div class="icon">✅</div>
+          <div class="name">Compliance</div>
+          <div class="desc">Checklist fiscale e accounting compliance</div>
+          <span class="badge-soon">Prossimamente</span>
+        </div>
+        <div class="tool-card disabled">
+          <div class="icon">📚</div>
+          <div class="name">Documenti</div>
+          <div class="desc">Libreria normativa e policy aziendali</div>
+          <span class="badge-soon">Prossimamente</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CALCOLO FATTURE -->
+    <div id="fatture-auto" class="section">
+      <button class="back-btn" onclick="showSection('home')">← Torna alla home</button>
+      <h2>Calcolo Fatture Automezzi</h2>
+
+      <div id="step-upload">
+        <div class="upload-zone" onclick="document.getElementById('file-input').click()">
+          <div class="icon">📸</div>
+          <div class="title">Carica fattura (PDF o immagine)</div>
+          <div class="hint">Trascina qui o clicca per selezionare</div>
+          <input id="file-input" type="file" accept="image/*,.pdf" style="display:none;" onchange="handleFileUpload(this.files[0])">
+        </div>
+        <div style="text-align:center; margin-top:12px;">
+          <button class="btn" onclick="skipOCR()" style="font-size:12px;">✏️ Inserisci manualmente senza OCR</button>
+        </div>
+      </div>
+
+      <div id="step-ocr" class="hidden">
+        <div class="loading">🔄 Estrazione dati in corso (OCR)...</div>
+      </div>
+
+      <div id="step-ocr-error" class="hidden">
+        <div class="error-box" id="ocr-error-msg"></div>
+        <button class="btn" onclick="skipOCR()">✏️ Inserisci manualmente</button>
+        &nbsp;
+        <button class="btn" onclick="resetFatture()">← Riprova</button>
+      </div>
+
+      <div id="step-edit" class="hidden">
+        <div class="card">
+          <div class="card-title">📄 DATI FATTURA</div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label>Fornitore</label>
+              <input type="text" id="fornitore" placeholder="es. Autosystem Spa">
+            </div>
+            <div class="form-group">
+              <label>Tipo spesa</label>
+              <select id="tipo-spesa">
+                <option value="carburante">Carburante</option>
+                <option value="noleggio">Noleggio</option>
+                <option value="manutenzione">Manutenzione</option>
+                <option value="assicurazione">Assicurazione</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Importo netto (€)</label>
+              <input type="number" id="tot-imp" step="0.01" placeholder="0.00">
+            </div>
+            <div class="form-group">
+              <label>IVA (€)</label>
+              <input type="number" id="tot-iva" step="0.01" placeholder="0.00">
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🚗 ALLOCAZIONE PER VEICOLO</div>
+          <div id="lines-container"></div>
+          <button class="btn" onclick="addLine()">+ Aggiungi veicolo</button>
+        </div>
+
+        <button class="btn primary" onclick="computeResult()" style="width:100%; margin-bottom:8px;">📊 Genera Registrazione Contabile</button>
+      </div>
+
+      <div id="step-result" class="hidden">
+        <div class="card">
+          <div class="card-title">✅ RIEPILOGO FISCALE</div>
+          <div class="grid-3">
+            <div class="stat-box">
+              <div class="stat-label">Totale documento</div>
+              <div class="stat-value" id="res-tot">€ 0,00</div>
+              <div class="stat-hint">Imponibile + IVA</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">IVA detraibile</div>
+              <div class="stat-value" style="color:#2DD4A0;" id="res-iva-det">€ 0,00</div>
+              <div class="stat-hint">40% di IVA (autovetture)</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">IVA indetraibile</div>
+              <div class="stat-value" style="color:#F06868;" id="res-iva-indet">€ 0,00</div>
+              <div class="stat-hint">→ incrementa il costo</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Costo deducibile</div>
+              <div class="stat-value" style="color:#2DD4A0;" id="res-costo-ded">€ 0,00</div>
+              <div class="stat-hint">70% del costo totale</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Costo indeducibile</div>
+              <div class="stat-value" style="color:#F06868;" id="res-costo-indet">€ 0,00</div>
+              <div class="stat-hint">30% del costo totale</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Veicoli elaborati</div>
+              <div class="stat-value" id="res-veicoli">0</div>
+              <div class="stat-hint">righe allocazione</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchTab('primanota', this)">📒 Primanota</button>
+          <button class="tab-btn" onclick="switchTab('anDed', this)">📊 Analitica Ded.</button>
+          <button class="tab-btn" onclick="switchTab('anInded', this)">📊 Indeducibile</button>
+        </div>
+
+        <div id="tab-primanota" class="card">
+          <table>
+            <thead>
+              <tr>
+                <th>Riga</th><th>Tipo</th><th>Conto</th><th>Descrizione</th>
+                <th style="text-align:right;">DARE</th><th style="text-align:right;">AVERE</th>
+              </tr>
+            </thead>
+            <tbody id="primanota-body"></tbody>
+          </table>
+        </div>
+        <div id="tab-anDed" class="card hidden">
+          <table>
+            <thead>
+              <tr><th>Conto</th><th>Voce</th><th>Descrizione</th><th style="text-align:right;">Importo</th></tr>
+            </thead>
+            <tbody id="anDed-body"></tbody>
+          </table>
+        </div>
+        <div id="tab-anInded" class="card hidden">
+          <table>
+            <thead>
+              <tr><th>Conto</th><th>Voce</th><th>Descrizione</th><th style="text-align:right;">Importo</th></tr>
+            </thead>
+            <tbody id="anInded-body"></tbody>
+          </table>
+        </div>
+
+        <button class="btn" onclick="resetFatture()" style="width:100%; margin-top:8px;">← Nuova fattura</button>
+      </div>
+    </div>
+
+    <!-- ANALITICHE — React si monta qui -->
+    <div id="analitiche" class="section">
+      <button class="back-btn" onclick="showSection('home')">← Torna alla home</button>
+      <div id="analitiche-root"></div>
+    </div>
+
+    <!-- SEZIONI IN COSTRUZIONE -->
+    <div id="iva-split" class="section">
+      <button class="back-btn" onclick="showSection('home')">← Torna alla home</button>
+      <h2>IVA Split — Pro-Rata</h2>
+      <div class="construction">
+        <div class="icon">🔨</div>
+        <h3>In costruzione</h3>
+        <p>Calcolo pro-rata IVA per attività miste (esenti + imponibili). Disponibile a breve.</p>
+      </div>
+    </div>
+    <div id="rendiconti" class="section">
+      <button class="back-btn" onclick="showSection('home')">← Torna alla home</button>
+      <h2>Rendiconti</h2>
+      <div class="construction">
+        <div class="icon">🔨</div>
+        <h3>In costruzione</h3>
+        <p>Rendiconti mensili per struttura RSA. Disponibile a breve.</p>
+      </div>
+    </div>
+    <div id="compliance" class="section">
+      <button class="back-btn" onclick="showSection('home')">← Torna alla home</button>
+      <h2>Compliance</h2>
+      <div class="construction">
+        <div class="icon">🔨</div>
+        <h3>In costruzione</h3>
+        <p>Checklist fiscale e accounting compliance. Disponibile a breve.</p>
+      </div>
+    </div>
+    <div id="documenti" class="section">
+      <button class="back-btn" onclick="showSection('home')">← Torna alla home</button>
+      <h2>Documenti</h2>
+      <div class="construction">
+        <div class="icon">🔨</div>
+        <h3>In costruzione</h3>
+        <p>Libreria normativa e policy aziendali. Disponibile a breve.</p>
+      </div>
+    </div>
+
+  </div><!-- /container -->
+
+  <!-- ===== SCRIPT PRINCIPALE (vanilla JS) ===== -->
+  <script>
+    // ---------------------------------------------------------------------------
+    // DATI FLOTTA — fallback hardcoded se il CSV non è raggiungibile
+    // ---------------------------------------------------------------------------
+    const FLEET_FALLBACK = [
+      { targa: "FP781CW", cdc: "VEVIGONOVOCRC", tipo: "Autocarro",   modello: "Fiat Ducato",                          assegnazione: "no" },
+      { targa: "GJ426VV", cdc: "VEHQSTR",       tipo: "Autovettura", modello: "Tucson 1.6 CRDI 48V DCT XLine",        assegnazione: "fringe benefit" },
+      { targa: "GL955PE", cdc: "VEJESOLOCRC",   tipo: "Autovettura", modello: "OPEL Corsa 1.5 D 100 CV Edition",      assegnazione: "fringe benefit" },
+      { targa: "GL960PE", cdc: "VEJESOLOCRC",   tipo: "Autovettura", modello: "OPEL Corsa 1.5 D 100 CV Edition",      assegnazione: "fringe benefit" },
+      { targa: "GM655PE", cdc: "VEVIGONOVOCRC", tipo: "Autovettura", modello: "OPEL Corsa 1.5 D 100 CV Edition",      assegnazione: "fringe benefit" },
+      { targa: "GM965ZY", cdc: "VEHQAMM",       tipo: "Autovettura", modello: "A4 Avant 30 Tdi 136 Cv",              assegnazione: "fringe benefit" },
+      { targa: "GP433MR", cdc: "VEHQGES",       tipo: "Autovettura", modello: "A4 Avant 30 Tdi 136 Cv",              assegnazione: "fringe benefit" },
+      { targa: "GS784RK", cdc: "VEHQACQ",       tipo: "Autovettura", modello: "KIA Xceed 1.6 Crdi 136 Cv",           assegnazione: "fringe benefit" },
+      { targa: "GW527NN", cdc: "VEHQRIU",       tipo: "Autovettura", modello: "Tonale 1.6 Diesel 130 Cv",            assegnazione: "fringe benefit" },
+      { targa: "GY375AS", cdc: "VEHQSIC",       tipo: "Autovettura", modello: "PEUGEOT 308 Bluehdi 130",             assegnazione: "fringe benefit" },
+      { targa: "GZ850SP", cdc: "VEHQRFS",       tipo: "Autovettura", modello: "KIA SPORTAGE 1.6 Crdi Mhev",          assegnazione: "fringe benefit" },
+      { targa: "GZ851SP", cdc: "VEHQQGC",       tipo: "Autovettura", modello: "KIA SPORTAGE 1.6 Crdi Mhev",          assegnazione: "fringe benefit" },
+      { targa: "HA512AF", cdc: "VEHQAMM",       tipo: "Autovettura", modello: "Renault Clio 100 CV 1.5 DCI",         assegnazione: "fringe benefit" },
+      { targa: "HA970XA", cdc: "VEHQRIU",       tipo: "Autovettura", modello: "DS 7 Bluehdi 130",                    assegnazione: "fringe benefit" },
+      { targa: "HB344BJ", cdc: "VEHQGES",       tipo: "Autovettura", modello: "BMW X2 sDRIVE 18d",                   assegnazione: "fringe benefit" },
+      { targa: "HB370BJ", cdc: "VEHQDIR",       tipo: "Autovettura", modello: "BMW X3 20D XDRIVE",                   assegnazione: "fringe benefit" },
+      { targa: "HB893TA", cdc: "VEHQAMM",       tipo: "Autovettura", modello: "BMW X2 sDRIVE 18d",                   assegnazione: "fringe benefit" },
+      { targa: "HA360XA", cdc: "VEHQACQ",       tipo: "Autovettura", modello: "Sportage 1.6 Crdi Mhev",              assegnazione: "fringe benefit" },
+      { targa: "HA361XA", cdc: "VEHQSIC",       tipo: "Autovettura", modello: "Sportage 1.6 Crdi Mhev",              assegnazione: "fringe benefit" },
+      { targa: "HC520BK", cdc: "VEHQSTR",       tipo: "Autovettura", modello: "Tiguan 2.0 Tdi 150 Cv",              assegnazione: "fringe benefit" },
+    ];
+
+    let FLEET = [];
+
+    // ---------------------------------------------------------------------------
+    // CARICAMENTO FLOTTA DA CSV (GitHub Pages: fetch relativo)
+    // ---------------------------------------------------------------------------
+    async function loadFleet() {
+      const badge = document.getElementById('fleet-badge');
+      try {
+        const resp = await fetch('Targhe.csv?t=' + Date.now());
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const text = await resp.text();
+        const lines = text.split('\n').filter(l => l.trim());
+        const loaded = [];
+        // riga 0 = header, skip
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(';').map(c => c.trim());
+          if (cols.length >= 4 && cols[0]) {
+            loaded.push({
+              targa: cols[0].trim(),
+              cdc:   cols[1].trim(),
+              tipo:  cols[2].trim(),
+              modello: cols[3].trim(),
+              assegnazione: (cols[4] || '').trim(),
+            });
+          }
+        }
+        if (loaded.length === 0) throw new Error('CSV vuoto');
+        FLEET = loaded;
+        badge.textContent = '🚗 ' + FLEET.length + ' veicoli da CSV';
+        badge.className = 'fleet-status fleet-ok';
+        badge.style.display = 'inline-block';
+      } catch (e) {
+        FLEET = [...FLEET_FALLBACK];
+        badge.textContent = '⚠️ Flotta da cache locale';
+        badge.className = 'fleet-status fleet-err';
+        badge.style.display = 'inline-block';
+      }
+    }
+
+    // ---------------------------------------------------------------------------
+    // TIPI DI SPESA — percentuali fiscali
+    // ---------------------------------------------------------------------------
+    const EXPENSE_TYPES = {
+      noleggio: {
+        label: "Noleggio",
+        autovettura: { ivaDetr: 0.40, costoDed: 0.70, contoDed: "030401004", contoInded: "030401009", voceDed: "03040100401", voceInded: "03040100901", descrDed: "Noleggio autovetture deducibile", descrInded: "Noleggio autovetture indeducibile" },
+        autocarro:   { ivaDetr: 1.00, costoDed: 1.00, contoDed: "030401003", contoInded: null, voceDed: "03040100301", voceInded: null, descrDed: "Noleggio autocarri", descrInded: null },
+      },
+      carburante: {
+        label: "Carburante",
+        autovettura: { ivaDetr: 0.40, costoDed: 0.70, contoDed: "030203051", contoInded: "030203052", voceDed: "03020305101", voceInded: "03020305102", descrDed: "Carburante autovetture deducibili", descrInded: "Carburante autovetture indeducibili" },
+        autocarro:   { ivaDetr: 1.00, costoDed: 1.00, contoDed: "030203050", contoInded: null, voceDed: "03020305001", voceInded: null, descrDed: "Carburante autocarri", descrInded: null },
+      },
+      manutenzione: {
+        label: "Manutenzione",
+        autovettura: { ivaDetr: 0.40, costoDed: 0.70, contoDed: "030203024", contoInded: "030203028", voceDed: "03020302401", voceInded: "03020302801", descrDed: "Manutenzione autovetture di terzi", descrInded: "Manutenzione autovetture indeducibile" },
+        autocarro:   { ivaDetr: 1.00, costoDed: 1.00, contoDed: "030203023", contoInded: null, voceDed: "03020302301", voceInded: null, descrDed: "Manutenzione autocarri di terzi", descrInded: null },
+      },
+      assicurazione: {
+        label: "Assicurazione",
+        autovettura: { ivaDetr: 0.00, costoDed: 0.70, contoDed: "030203001", contoInded: "030203001", voceDed: "03020300101", voceInded: "03020300101", descrDed: "Assicurazioni (deducibile)", descrInded: "Assicurazioni (indeducibile)" },
+        autocarro:   { ivaDetr: 0.00, costoDed: 1.00, contoDed: "030203001", contoInded: null, voceDed: "03020300101", voceInded: null, descrDed: "Assicurazioni", descrInded: null },
+      },
+    };
+
+    let state = { invoiceData: null, lines: [], result: null };
+
+    // ---------------------------------------------------------------------------
+    // NAVIGAZIONE
+    // ---------------------------------------------------------------------------
+    let analyticsRoot = null;
+
+    function showSection(id) {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      window.scrollTo(0, 0);
+      // Monta React Analytics solo quando necessario
+      if (id === 'analitiche') {
+        mountAnalytics();
+      }
+    }
+
+    function mountAnalytics() {
+      const container = document.getElementById('analitiche-root');
+      if (!container || !window.AnalyticsApp) return;
+      if (!analyticsRoot) {
+        analyticsRoot = ReactDOM.createRoot(container);
+        analyticsRoot.render(React.createElement(window.AnalyticsApp));
+      }
+    }
+
+    // ---------------------------------------------------------------------------
+    // UTILITY
+    // ---------------------------------------------------------------------------
+    function fmt(n) {
+      return new Intl.NumberFormat("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+    }
+
+    function findVehicle(targa) {
+      const clean = targa.replace(/[\s\-\.]/g, "").toUpperCase();
+      return FLEET.find(v => v.targa.replace(/[\s\-\.]/g, "").toUpperCase() === clean);
+    }
+
+    // ---------------------------------------------------------------------------
+    // OCR — caricamento fattura
+    // ---------------------------------------------------------------------------
+    function handleFileUpload(file) {
+      if (!file) return;
+      document.getElementById('step-upload').classList.add('hidden');
+      document.getElementById('step-ocr').classList.remove('hidden');
+      runOCR(file);
+    }
+
+    function skipOCR() {
+      document.getElementById('step-upload').classList.add('hidden');
+      document.getElementById('step-ocr-error').classList.add('hidden');
+      document.getElementById('step-edit').classList.remove('hidden');
+    }
+
+    async function runOCR(file) {
+      try {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            const b64 = e.target.result.split(',')[1];
+            const mediaType = file.type === "application/pdf" ? "application/pdf" : file.type;
+            const msgContent = mediaType === "application/pdf"
+              ? [{ type: "document", source: { type: "base64", media_type: mediaType, data: b64 } }]
+              : [{ type: "image",    source: { type: "base64", media_type: mediaType, data: b64 } }];
+            msgContent.push({
+              type: "text",
+              text: "Estrai da questa fattura: numero fattura, data, importo netto, IVA, importo totale, nominativo fornitore. Rispondi SOLO in JSON valido senza markdown: {\"numero\": \"\", \"data\": \"\", \"impNet\": 0, \"iva\": 0, \"tot\": 0, \"fornitore\": \"\"}"
+            });
+
+            const resp = await fetch("https://ocr.gonzalo-alonsotv.workers.dev", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                model: "claude-sonnet-4-6",
+                max_tokens: 1000,
+                messages: [{ role: "user", content: msgContent }],
+              }),
+            });
+
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data.error?.message || "Errore API: " + resp.status);
+            if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+
+            const txt = data.content?.[0]?.text || "";
+            const clean = txt.replace(/```json|```/g, "").trim();
+            const parsed = JSON.parse(clean);
+
+            state.invoiceData = parsed;
+            document.getElementById('fornitore').value = parsed.fornitore || "";
+            document.getElementById('tot-imp').value   = parsed.impNet  || "";
+            document.getElementById('tot-iva').value   = parsed.iva     || "";
+
+            document.getElementById('step-ocr').classList.add('hidden');
+            document.getElementById('step-edit').classList.remove('hidden');
+          } catch (err) {
+            document.getElementById('step-ocr').classList.add('hidden');
+            document.getElementById('ocr-error-msg').textContent =
+              "⚠️ OCR non riuscito: " + err.message + ". Puoi inserire i dati manualmente.";
+            document.getElementById('step-ocr-error').classList.remove('hidden');
+          }
+        };
+        reader.readAsDataURL(file);
+      } catch (err) {
+        document.getElementById('step-ocr').classList.add('hidden');
+        document.getElementById('ocr-error-msg').textContent = "⚠️ Errore lettura file: " + err.message;
+        document.getElementById('step-ocr-error').classList.remove('hidden');
+      }
+    }
+
+    // ---------------------------------------------------------------------------
+    // RIGHE VEICOLO
+    // ---------------------------------------------------------------------------
+    function addLine() {
+      const container = document.getElementById('lines-container');
+      const id = Date.now();
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.id = 'line-' + id;
+      row.innerHTML = `
+        <div class="form-group">
+          <label>Targa</label>
+          <input type="text" placeholder="es. GJ426VV" oninput="updateLine(${id}, 'targa', this.value)">
+        </div>
+        <div class="form-group">
+          <label>Info veicolo</label>
+          <div style="padding:10px; color:#8694B0; font-size:11px; line-height:1.4;" id="info-${id}">—</div>
+        </div>
+        <div class="form-group">
+          <label>Importo netto (€)</label>
+          <input type="number" step="0.01" placeholder="0.00" oninput="updateLine(${id}, 'imp', this.value)">
+        </div>
+        <div class="form-group">
+          <label>Totale riga</label>
+          <div style="padding:10px; color:#4A7FFF; font-weight:600; font-family:'JetBrains Mono',monospace; font-size:11px;" id="tot-${id}">€ 0,00</div>
+        </div>
+        <div></div>
+        <button class="btn" onclick="removeLine(${id})" style="padding:4px 10px; font-size:14px;">✕</button>
+      `;
+      container.appendChild(row);
+      state.lines.push({ id, targa: '', imp: 0, car: null });
+    }
+
+    function updateLine(id, field, value) {
+      const line = state.lines.find(l => l.id === id);
+      if (!line) return;
+      if (field === 'targa') {
+        line.targa = value;
+        const car = findVehicle(value);
+        line.car = car;
+        const infoEl = document.getElementById('info-' + id);
+        if (car) {
+          infoEl.innerHTML = `<span style="color:#2DD4A0;">✓ ${car.tipo}</span><br><span style="color:#E8ECFA;">${car.modello}</span><br><span style="color:#8694B0;">${car.cdc}</span>`;
+        } else {
+          infoEl.innerHTML = value.length >= 7 ? '<span style="color:#F06868;">✗ Targa non trovata</span>' : '—';
+        }
+      } else if (field === 'imp') {
+        line.imp = parseFloat(value) || 0;
+        document.getElementById('tot-' + id).textContent = '€ ' + fmt(line.imp);
+      }
+    }
+
+    function removeLine(id) {
+      state.lines = state.lines.filter(l => l.id !== id);
+      const el = document.getElementById('line-' + id);
+      if (el) el.remove();
+    }
+
+    // ---------------------------------------------------------------------------
+    // CALCOLO REGISTRAZIONE
+    // ---------------------------------------------------------------------------
+    function computeResult() {
+      if (state.lines.length === 0) {
+        alert('Aggiungi almeno un veicolo prima di generare la registrazione.');
+        return;
+      }
+      const tipoSpesa = document.getElementById('tipo-spesa').value;
+      const totImp    = parseFloat(document.getElementById('tot-imp').value) || 0;
+      const totIva    = parseFloat(document.getElementById('tot-iva').value) || 0;
+      if (totImp === 0) { alert('Inserisci l\'importo netto della fattura.'); return; }
+
+      // Usa il tipo del primo veicolo per determinare le regole
+      const firstCar   = state.lines.find(l => l.car)?.car;
+      const tipoVeic   = firstCar?.tipo === "Autocarro" ? "autocarro" : "autovettura";
+      const ru         = EXPENSE_TYPES[tipoSpesa][tipoVeic];
+
+      const tIvaDet    = totIva * ru.ivaDetr;
+      const tIvaIndet  = totIva - tIvaDet;
+      const impAdj     = totImp + tIvaIndet;        // costo base (imp + IVA indetr)
+      const tCDed      = impAdj * ru.costoDed;
+      const tCIndet    = impAdj * (1 - ru.costoDed);
+
+      // Primanota
+      const pn = [
+        { r: 1, t: "F", conto: "200200001", descr: "Debiti v/fornitori",  dare: 0,         avere: totImp + totIva },
+        { r: 2, t: "F", conto: "200100001", descr: "IVA a credito",        dare: tIvaDet,   avere: 0 },
+      ];
+      let rigaIdx = 3;
+      state.lines.forEach((l) => {
+        const isAutocarr = l.car?.tipo === "Autocarro";
+        const ratio      = isAutocarr ? 1.0 : ru.costoDed;
+        const impRow     = l.imp > 0 ? l.imp : impAdj / state.lines.length; // fallback split uniforme
+        if (ru.contoDed)   pn.push({ r: rigaIdx++, t: "N", conto: ru.contoDed,   descr: ru.descrDed   + (l.targa ? ' (' + l.targa + ')' : ''), dare: impRow * ratio,        avere: 0 });
+        if (ru.contoInded) pn.push({ r: rigaIdx++, t: "N", conto: ru.contoInded, descr: ru.descrInded + (l.targa ? ' (' + l.targa + ')' : ''), dare: impRow * (1 - ratio), avere: 0 });
+      });
+
+      // KPI display
+      document.getElementById('res-tot').textContent       = '€ ' + fmt(totImp + totIva);
+      document.getElementById('res-iva-det').textContent   = '€ ' + fmt(tIvaDet);
+      document.getElementById('res-iva-indet').textContent = '€ ' + fmt(tIvaIndet);
+      document.getElementById('res-costo-ded').textContent = '€ ' + fmt(tCDed);
+      document.getElementById('res-costo-indet').textContent = '€ ' + fmt(tCIndet);
+      document.getElementById('res-veicoli').textContent   = state.lines.length;
+
+      // Primanota table
+      const tbody = document.getElementById('primanota-body');
+      tbody.innerHTML = '';
+      pn.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="mono dim">${r.r}</td>
+          <td><span class="${r.t === 'F' ? 'badge badge-yellow' : 'badge badge-blue'}">${r.t}</span></td>
+          <td class="mono accent">${r.conto}</td>
+          <td>${r.descr}</td>
+          <td style="text-align:right;" class="mono">${r.dare  > 0 ? '€ ' + fmt(r.dare)  : '—'}</td>
+          <td style="text-align:right;" class="mono">${r.avere > 0 ? '€ ' + fmt(r.avere) : '—'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Analitica deducibile
+      const anbody = document.getElementById('anDed-body');
+      anbody.innerHTML = '';
+      state.lines.forEach(l => {
+        const isAutocarr = l.car?.tipo === "Autocarro";
+        const ratio  = isAutocarr ? 1.0 : ru.costoDed;
+        const impRow = l.imp > 0 ? l.imp : impAdj / state.lines.length;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="mono accent">${ru.contoDed}</td>
+          <td class="mono dim">${ru.voceDed}</td>
+          <td>${ru.descrDed}${l.targa ? ' — ' + l.targa : ''}</td>
+          <td style="text-align:right;" class="mono">€ ${fmt(impRow * ratio)}</td>
+        `;
+        anbody.appendChild(tr);
+      });
+
+      // Analitica indeducibile
+      if (ru.contoInded) {
+        const anbody2 = document.getElementById('anInded-body');
+        anbody2.innerHTML = '';
+        state.lines.forEach(l => {
+          const isAutocarr = l.car?.tipo === "Autocarro";
+          const ratio  = isAutocarr ? 1.0 : ru.costoDed;
+          const impRow = l.imp > 0 ? l.imp : impAdj / state.lines.length;
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="mono accent">${ru.contoInded}</td>
+            <td class="mono dim">${ru.voceInded}</td>
+            <td>${ru.descrInded}${l.targa ? ' — ' + l.targa : ''}</td>
+            <td style="text-align:right;" class="mono">€ ${fmt(impRow * (1 - ratio))}</td>
+          `;
+          anbody2.appendChild(tr);
+        });
+      }
+
+      document.getElementById('step-edit').classList.add('hidden');
+      document.getElementById('step-result').classList.remove('hidden');
+    }
+
+    function switchTab(tab, btn) {
+      document.querySelectorAll('[id^="tab-"]').forEach(el => el.classList.add('hidden'));
+      document.getElementById('tab-' + tab).classList.remove('hidden');
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+    }
+
+    function resetFatture() {
+      state = { invoiceData: null, lines: [], result: null };
+      ['step-upload','step-ocr','step-ocr-error','step-edit','step-result'].forEach(id => {
+        document.getElementById(id)?.classList.add('hidden');
+      });
+      document.getElementById('step-upload').classList.remove('hidden');
+      const fi = document.getElementById('file-input');
+      if (fi) fi.value = '';
+      document.getElementById('lines-container').innerHTML = '';
+      document.getElementById('fornitore').value = '';
+      document.getElementById('tot-imp').value = '';
+      document.getElementById('tot-iva').value = '';
+    }
+
+    // ---------------------------------------------------------------------------
+    // INIT
+    // ---------------------------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', loadFleet);
+  </script>
+
+  <!-- ===== REACT: SEZIONE ANALITICHE ===== -->
+  <script type="text/babel">
+    const { useState, useEffect, useCallback } = React;
+    const { LineChart, Line, BarChart, Bar, XAxis, YAxis,
+            CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts;
+
+    const C = {
+      bg: "#0A0E1A", card: "#141926", border: "#252D42",
+      accent: "#4A7FFF", accentSoft: "#1E3A6E",
+      green: "#2DD4A0", greenBg: "#0C2D24",
+      red: "#F06868", redBg: "#2D1515",
+      yellow: "#F5C542", yellowBg: "#2D2510",
+      orange: "#FF9500", orangeBg: "#2D2010",
+      text: "#E8ECFA", dim: "#8694B0",
+      mono: "'JetBrains Mono','Fira Code',monospace",
+      sans: "'Inter','DM Sans',system-ui,sans-serif",
+    };
+
+    const EXPENSE_COLORS = {
+      carburante: "#4A7FFF",
+      manutenzione: "#2DD4A0",
+      noleggio: "#F5C542",
+    };
+
+    const MONTHS = ["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"];
+
+    const fmtA = n => new Intl.NumberFormat("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0);
+    const fmtK = n => n >= 1000 ? `€${(n/1000).toFixed(1)}k` : `€${fmtA(n)}`;
+
+    function detectExpenseType(descr) {
+      if (!descr) return null;
+      const d = descr.toLowerCase();
+      if (d.includes("carburant") || d.includes("benzin") || d.includes("gasolio") || d.includes("diesel")) return "carburante";
+      if (d.includes("manutenz") || d.includes("riparaz") || d.includes("officin") || d.includes("pneumat") || d.includes("gomm")) return "manutenzione";
+      if (d.includes("noleggio") || d.includes("locaz") || d.includes("leasing") || d.includes("canone")) return "noleggio";
+      return null;
+    }
+
+    function parseCSV(text) {
+      const lines = text.split('\n').filter(l => l.trim());
+      if (lines.length < 2) return [];
+      const sep = lines[0].includes(';') ? ';' : ',';
+      const rows = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(sep).map(c => c.trim().replace(/^"|"$/g, ''));
+        if (cols.length < 18) continue;
+        const importoRaw = cols[9]?.replace(/\./g, '').replace(',', '.');
+        const importo = parseFloat(importoRaw);
+        const dataDoc = cols[12];
+        const cdc = cols[17];
+        const descrVoc = cols[13] || '';
+        const descrCdc = cols[19] || cols[17];
+        if (!dataDoc || isNaN(importo) || importo <= 0) continue;
+        let date;
+        const parts = dataDoc.split('/');
+        if (parts.length === 3) {
+          date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+        } else {
+          date = new Date(dataDoc);
+        }
+        if (isNaN(date.getTime())) continue;
+        const tipo = detectExpenseType(descrVoc) || detectExpenseType(descrCdc) || detectExpenseType(cols.join(' '));
+        if (!tipo) continue;
+        rows.push({ importo, data: date, anno: date.getFullYear(), mese: date.getMonth(), cdc, descrCdc: descrCdc || cdc, tipo });
+      }
+      return rows;
+    }
+
+    function AnalyticsApp() {
+      const [data, setData] = useState([]);
+      const [loading, setLoading] = useState(false);
+      const [autoLoading, setAutoLoading] = useState(true);
+      const [error, setError] = useState(null);
+      const [anno, setAnno] = useState(new Date().getFullYear());
+      const [filterCdc, setFilterCdc] = useState("tutti");
+      const [filterTipo, setFilterTipo] = useState("tutti");
+      const [filterMese, setFilterMese] = useState("tutti");
+      const [view, setView] = useState("trend");
+      const [fileName, setFileName] = useState(null);
+
+      const CSV_URL = "https://raw.githubusercontent.com/GonzAl0nso/DashboardAlonso/main/analitica%20auto%20.csv";
+
+      useEffect(() => {
+        setAutoLoading(true);
+        fetch(CSV_URL + "?t=" + Date.now())
+          .then(r => { if (!r.ok) throw new Error("File non trovato su GitHub (status " + r.status + ")"); return r.text(); })
+          .then(text => { processFile(text); setFileName("analitica auto .csv (GitHub)"); })
+          .catch(() => { setError("Dati non caricati automaticamente. Carica il CSV manualmente con il pulsante qui sopra."); })
+          .finally(() => setAutoLoading(false));
+      }, []);
+
+      function processFile(text) {
+        const rows = parseCSV(text);
+        if (rows.length === 0) { setError("Nessuna riga valida trovata nel CSV."); return; }
+        setData(rows);
+        const anni = [...new Set(rows.map(r => r.anno))].sort();
+        if (anni.length > 0) setAnno(anni[anni.length - 1]);
+        setError(null);
+      }
+
+      const handleFileUpload = useCallback((f) => {
+        if (!f) return;
+        setFileName(f.name);
+        setLoading(true);
+        const reader = new FileReader();
+        reader.onload = (e) => { processFile(e.target.result); setLoading(false); };
+        reader.onerror = () => { setError("Errore lettura file"); setLoading(false); };
+        reader.readAsText(f, 'windows-1252');
+      }, []);
+
+      const filtered = data.filter(r => {
+        if (r.anno !== anno) return false;
+        if (filterCdc  !== "tutti" && r.cdc  !== filterCdc)              return false;
+        if (filterTipo !== "tutti" && r.tipo !== filterTipo)             return false;
+        if (filterMese !== "tutti" && r.mese !== parseInt(filterMese))  return false;
+        return true;
+      });
+
+      const allCdcs = [...new Set(data.filter(r => r.anno === anno).map(r => r.cdc))].sort();
+      const anni    = [...new Set(data.map(r => r.anno))].sort();
+
+      const trendData = MONTHS.map((m, mi) => {
+        const row = { mese: m };
+        ["carburante","manutenzione","noleggio"].forEach(tipo => {
+          if (filterTipo !== "tutti" && filterTipo !== tipo) return;
+          row[tipo] = filtered.filter(r => r.mese === mi && r.tipo === tipo).reduce((s, r) => s + r.importo, 0);
+        });
+        row.totale = (row.carburante || 0) + (row.manutenzione || 0) + (row.noleggio || 0);
+        return row;
+      });
+
+      const cdcData = allCdcs.map(cdc => {
+        const rows = filtered.filter(r => r.cdc === cdc);
+        return {
+          cdc: cdc.length > 14 ? cdc.substring(0, 14) + '…' : cdc, cdcFull: cdc,
+          carburante:   rows.filter(r => r.tipo === "carburante").reduce((s, r) => s + r.importo, 0),
+          manutenzione: rows.filter(r => r.tipo === "manutenzione").reduce((s, r) => s + r.importo, 0),
+          noleggio:     rows.filter(r => r.tipo === "noleggio").reduce((s, r) => s + r.importo, 0),
+        };
+      }).filter(r => (r.carburante + r.manutenzione + r.noleggio) > 0)
+        .sort((a, b) => (b.carburante + b.manutenzione + b.noleggio) - (a.carburante + a.manutenzione + a.noleggio));
+
+      const alerts = [];
+      ["carburante","manutenzione","noleggio"].forEach(tipo => {
+        if (filterTipo !== "tutti" && filterTipo !== tipo) return;
+        const vals = trendData.map(r => r[tipo] || 0).filter(v => v > 0);
+        if (vals.length < 2) return;
+        const media = vals.reduce((s, v) => s + v, 0) / vals.length;
+        trendData.forEach((r) => {
+          const v = r[tipo] || 0;
+          if (v === 0) return;
+          const delta = ((v - media) / media) * 100;
+          if (Math.abs(delta) >= 20) alerts.push({ mese: r.mese, tipo, importo: v, media, delta, severity: Math.abs(delta) >= 40 ? "high" : "medium" });
+        });
+      });
+
+      const totCarb = filtered.filter(r => r.tipo === "carburante").reduce((s, r) => s + r.importo, 0);
+      const totMan  = filtered.filter(r => r.tipo === "manutenzione").reduce((s, r) => s + r.importo, 0);
+      const totNol  = filtered.filter(r => r.tipo === "noleggio").reduce((s, r) => s + r.importo, 0);
+      const totale  = totCarb + totMan + totNol;
+
+      const customTooltip = ({ active, payload }) => {
+        if (!active || !payload?.length) return null;
+        return (
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", fontSize: 12 }}>
+            {payload.map((p, i) => <div key={i} style={{ color: p.color }}>{p.name}: € {fmtA(p.value)}</div>)}
+          </div>
+        );
+      };
+
+      const selStyle = { background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: "8px 12px", fontSize: 13, outline: "none" };
+
+      return (
+        <div style={{ fontFamily: C.sans, color: C.text }}>
+          <style>{`* { box-sizing: border-box; } select option { background: #141926; }`}</style>
+
+          {/* TOOLBAR */}
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 20 }}>
+            <label style={{ background: C.accentSoft, color: C.accent, border: `1px solid ${C.accent}`, borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+              📂 {fileName || "Carica CSV"}
+              <input type="file" accept=".csv,.txt" style={{ display: "none" }} onChange={e => handleFileUpload(e.target.files[0])} />
+            </label>
+            {data.length > 0 && (
+              <>
+                <select value={anno} onChange={e => setAnno(parseInt(e.target.value))} style={selStyle}>
+                  {anni.map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
+                <select value={filterMese} onChange={e => setFilterMese(e.target.value)} style={selStyle}>
+                  <option value="tutti">Tutti i mesi</option>
+                  {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                </select>
+                <select value={filterCdc} onChange={e => setFilterCdc(e.target.value)} style={{ ...selStyle, maxWidth: 220 }}>
+                  <option value="tutti">Tutti i CdC</option>
+                  {allCdcs.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <select value={filterTipo} onChange={e => setFilterTipo(e.target.value)} style={selStyle}>
+                  <option value="tutti">Tutte le spese</option>
+                  <option value="carburante">Carburante</option>
+                  <option value="manutenzione">Manutenzione</option>
+                  <option value="noleggio">Noleggio</option>
+                </select>
+                {alerts.length > 0 && (
+                  <div style={{ background: C.redBg, border: `1px solid ${C.red}`, borderRadius: 8, padding: "8px 14px", fontSize: 12, color: C.red, fontWeight: 600, marginLeft: "auto" }}>
+                    🚨 {alerts.length} anomali{alerts.length === 1 ? "a" : "e"}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* ERRORE */}
+          {error && <div style={{ background: C.redBg, border: `1px solid ${C.red}`, borderRadius: 10, padding: 14, color: C.red, fontSize: 13, marginBottom: 16 }}>⚠️ {error}</div>}
+
+          {/* CARICAMENTO */}
+          {(loading || autoLoading) && <div style={{ textAlign: "center", padding: 40, color: C.dim }}>⏳ Caricamento dati da GitHub...</div>}
+
+          {/* STATO VUOTO */}
+          {data.length === 0 && !loading && !autoLoading && !error && (
+            <div style={{ background: C.card, borderRadius: 16, padding: "56px 24px", textAlign: "center", border: `2px dashed ${C.border}` }}>
+              <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.5 }}>📊</div>
+              <div style={{ fontSize: 16, fontWeight: 600 }}>Nessun dato</div>
+              <div style={{ fontSize: 13, color: C.dim, marginTop: 8 }}>Carica il CSV dell'analitica o aggiorna il file su GitHub</div>
+            </div>
+          )}
+
+          {/* DATI CARICATI */}
+          {data.length > 0 && !loading && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {/* KPI */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px,1fr))", gap: 12 }}>
+                {[
+                  { label: "Totale", value: totale, color: C.text, icon: "💰" },
+                  { label: "Carburante", value: totCarb, color: EXPENSE_COLORS.carburante, icon: "⛽" },
+                  { label: "Manutenzione", value: totMan, color: EXPENSE_COLORS.manutenzione, icon: "🔧" },
+                  { label: "Noleggio", value: totNol, color: EXPENSE_COLORS.noleggio, icon: "🚗" },
+                ].map((k, i) => (
+                  <div key={i} style={{ background: C.card, borderRadius: 10, padding: 16, border: `1px solid ${C.border}` }}>
+                    <div style={{ fontSize: 11, color: C.dim, marginBottom: 6 }}>{k.icon} {k.label}</div>
+                    <div style={{ fontSize: 20, fontWeight: 700, fontFamily: C.mono, color: k.color }}>{fmtK(k.value)}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* TABS */}
+              <div style={{ display: "flex", gap: 2, background: C.card, borderRadius: 10, padding: 3, border: `1px solid ${C.border}` }}>
+                {[
+                  { k: "trend", l: "📈 Trend mensile" },
+                  { k: "cdc",   l: "🏢 Per Centro di Costo" },
+                  { k: "alert", l: `🚨 Alert (${alerts.length})` },
+                ].map(t => (
+                  <button key={t.k} onClick={() => setView(t.k)} style={{ flex: 1, padding: "10px 8px", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 600, background: view === t.k ? C.accent : "transparent", color: view === t.k ? "#fff" : C.dim, cursor: "pointer" }}>{t.l}</button>
+                ))}
+              </div>
+
+              {/* GRAFICO TREND */}
+              {view === "trend" && (
+                <div style={{ background: C.card, borderRadius: 10, padding: 16, border: `1px solid ${C.border}` }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 16 }}>Trend mensile {anno}</div>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <LineChart data={trendData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                      <XAxis dataKey="mese" tick={{ fill: C.dim, fontSize: 11 }} />
+                      <YAxis tick={{ fill: C.dim, fontSize: 11 }} />
+                      <Tooltip content={customTooltip} />
+                      <Legend />
+                      {(filterTipo === "tutti" || filterTipo === "carburante")   && <Line type="monotone" dataKey="carburante"   stroke={EXPENSE_COLORS.carburante}   strokeWidth={2} dot={{ r: 3 }} name="Carburante" />}
+                      {(filterTipo === "tutti" || filterTipo === "manutenzione") && <Line type="monotone" dataKey="manutenzione" stroke={EXPENSE_COLORS.manutenzione} strokeWidth={2} dot={{ r: 3 }} name="Manutenzione" />}
+                      {(filterTipo === "tutti" || filterTipo === "noleggio")     && <Line type="monotone" dataKey="noleggio"     stroke={EXPENSE_COLORS.noleggio}     strokeWidth={2} dot={{ r: 3 }} name="Noleggio" />}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {/* GRAFICO PER CDC */}
+              {view === "cdc" && (
+                <div style={{ background: C.card, borderRadius: 10, padding: 16, border: `1px solid ${C.border}` }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 16 }}>Spese per Centro di Costo — {anno}</div>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={cdcData} margin={{ top: 5, right: 20, bottom: 70, left: 10 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                      <XAxis dataKey="cdc" tick={{ fill: C.dim, fontSize: 10 }} angle={-35} textAnchor="end" interval={0} />
+                      <YAxis tick={{ fill: C.dim, fontSize: 11 }} />
+                      <Tooltip content={customTooltip} />
+                      <Legend />
+                      {(filterTipo === "tutti" || filterTipo === "carburante")   && <Bar dataKey="carburante"   stackId="a" fill={EXPENSE_COLORS.carburante}   name="Carburante" />}
+                      {(filterTipo === "tutti" || filterTipo === "manutenzione") && <Bar dataKey="manutenzione" stackId="a" fill={EXPENSE_COLORS.manutenzione} name="Manutenzione" />}
+                      {(filterTipo === "tutti" || filterTipo === "noleggio")     && <Bar dataKey="noleggio"     stackId="a" fill={EXPENSE_COLORS.noleggio}     name="Noleggio" radius={[4,4,0,0]} />}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {/* ALERT */}
+              {view === "alert" && (
+                <div>
+                  {alerts.length === 0 ? (
+                    <div style={{ background: C.greenBg, border: `1px solid ${C.green}`, borderRadius: 10, padding: 24, textAlign: "center", color: C.green, fontWeight: 600 }}>
+                      ✅ Nessuna anomalia — tutte le spese nella norma (±20% dalla media)
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {alerts.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).map((al, i) => {
+                        const isHigh = al.severity === "high";
+                        return (
+                          <div key={i} style={{ background: isHigh ? C.redBg : C.orangeBg, border: `1px solid ${isHigh ? C.red : C.orange}`, borderRadius: 10, padding: 14 }}>
+                            <div style={{ fontWeight: 600, color: isHigh ? C.red : C.orange }}>
+                              {isHigh ? "🚨" : "⚠️"} {al.tipo.charAt(0).toUpperCase() + al.tipo.slice(1)} — {al.mese} &nbsp;({al.delta > 0 ? "+" : ""}{al.delta.toFixed(1)}% vs media)
+                            </div>
+                            <div style={{ fontSize: 12, color: C.dim, marginTop: 6 }}>
+                              Importo: € {fmtA(al.importo)} &nbsp;|&nbsp; Media periodo: € {fmtA(al.media)} &nbsp;|&nbsp; Scostamento: {al.delta > 0 ? "+" : ""}€ {fmtA(al.importo - al.media)}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Esponi al contesto globale per il mounting lazy
+    window.AnalyticsApp = AnalyticsApp;
+  </script>
+
+</body>
+</html>
