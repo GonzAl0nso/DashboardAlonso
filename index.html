@@ -596,7 +596,7 @@ async function initAnalitiche() {
   anLoaded=true;
   const ldiv=document.getElementById('an-loading');
   ldiv.style.display='block';
-  const CSV_URL='https://raw.githubusercontent.com/GonzAl0nso/DashboardAlonso/main/analitica%20auto%20.csv';
+  const CSV_URL='https://raw.githubusercontent.com/GonzAl0nso/DashboardAlonso/main/analitica_auto.csv';
   try {
     const r=await fetch(CSV_URL+'?t='+Date.now());
     if (!r.ok) throw new Error('HTTP '+r.status);
