@@ -572,22 +572,70 @@ function detectTipo(s) {
   return null;
 }
 function parseAnCSV(txt) {
-  const lines=txt.split('\n').filter(l=>l.trim());
-  if (lines.length<2) return [];
-  const sep=lines[0].includes(';')?';':',';
-  const rows=[];
-  for (let i=1;i<lines.length;i++) {
-    const c=lines[i].split(sep).map(s=>s.trim().replace(/^"|"$/g,''));
-    if (c.length<18) continue;
-    const imp=parseFloat((c[9]||'').replace(/\./g,'').replace(',','.'));
-    if (!imp||imp<=0) continue;
-    const ds=c[12]||''; let date;
-    const p=ds.split('/');
-    date=p.length===3?new Date(+p[2],+p[1]-1,+p[0]):new Date(ds);
-    if (isNaN(date)) continue;
-    const tipo=detectTipo(c[13])||detectTipo(c[19])||detectTipo(c.join(' '));
+  // Normalizza line endings
+  const lines = txt.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim());
+  if (lines.length < 2) return [];
+  const sep = lines[0].includes(';') ? ';' : ',';
+
+  // Legge l'intestazione per trovare le colonne per NOME (non per indice fisso)
+  const hdr = lines[0].split(sep).map(h=>h.trim().replace(/^"|"$/g,'').toUpperCase());
+  const col = name => hdr.indexOf(name);
+
+  // Colonne principali (con alias)
+  const iAmt  = col('TOTIMP');
+  const iDate = col('DATDOC') >= 0 ? col('DATDOC') : col('DATREG');
+  const iDesc = col('DESVOC');
+  const iCdc  = col('CODICE');
+  const iCdcD = col('CCDESPIA');
+
+  // Se non trova le colonne chiave, prova a indovinare dal contenuto
+  if (iAmt < 0 || iDate < 0) {
+    // fallback: usa indici originali se sembrano validi
+    return parseAnCSVFallback(lines, sep);
+  }
+
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const c = lines[i].split(sep).map(s=>s.trim().replace(/^"|"$/g,''));
+    const imp = parseFloat((c[iAmt]||'').replace(/\./g,'').replace(',','.'));
+    if (!imp || imp <= 0) continue;
+    const ds = c[iDate]||'';
+    let date;
+    const p = ds.split('/');
+    date = p.length>=3 ? new Date(+p[2],+p[1]-1,+p[0]) : new Date(ds);
+    if (!date || isNaN(date.getTime())) continue;
+    const descrVoc = iDesc>=0 ? c[iDesc] : '';
+    const descrCdc = iCdcD>=0 ? c[iCdcD] : '';
+    const tipo = detectTipo(descrVoc) || detectTipo(descrCdc) || detectTipo(c.join(' '));
     if (!tipo) continue;
-    rows.push({imp,anno:date.getFullYear(),mese:date.getMonth(),cdc:c[17]||'',tipo});
+    rows.push({ imp, anno:date.getFullYear(), mese:date.getMonth(), cdc:iCdc>=0?c[iCdc]:'', tipo });
+  }
+  return rows;
+}
+
+function parseAnCSVFallback(lines, sep) {
+  // Prova indici fissi come prima soluzione di emergenza
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const c = lines[i].split(sep).map(s=>s.trim().replace(/^"|"$/g,''));
+    if (c.length < 10) continue;
+    // Cerca colonna con importo (numero con virgola)
+    let imp = 0, iAmt = -1;
+    for (let j=5; j<Math.min(c.length,15); j++) {
+      const v = parseFloat((c[j]||'').replace(/\./g,'').replace(',','.'));
+      if (v>0 && v<1000000) { imp=v; iAmt=j; break; }
+    }
+    if (!imp) continue;
+    // Cerca colonna con data (formato gg/mm/aaaa)
+    let date = null;
+    for (let j=0; j<Math.min(c.length,15); j++) {
+      const p = (c[j]||'').split('/');
+      if (p.length>=3) { const d=new Date(+p[2],+p[1]-1,+p[0]); if (!isNaN(d.getTime())&&d.getFullYear()>2000) { date=d; break; } }
+    }
+    if (!date) continue;
+    const tipo = detectTipo(c.join(' '));
+    if (!tipo) continue;
+    rows.push({ imp, anno:date.getFullYear(), mese:date.getMonth(), cdc:c[Math.min(17,c.length-1)]||'', tipo });
   }
   return rows;
 }
@@ -621,10 +669,33 @@ function loadAnFile(file) {
   anLoaded=true;
   document.getElementById('an-err').style.display='none';
   document.getElementById('an-empty').style.display='none';
-  document.getElementById('an-fname').textContent=file.name;
+  document.getElementById('an-fname').textContent='⏳ ' + file.name;
   const reader=new FileReader();
-  reader.onload=e=>{ anData=parseAnCSV(e.target.result); setupAnFilters(); renderAnalitiche(); };
+  reader.onload=e=>{
+    // prova prima windows-1252, poi UTF-8 come fallback
+    anData=parseAnCSV(e.target.result);
+    if (!anData.length) {
+      // riprova con UTF-8
+      const r2=new FileReader();
+      r2.onload=e2=>{ anData=parseAnCSV(e2.target.result); finishLoad(file.name); };
+      r2.readAsText(file,'utf-8');
+    } else { finishLoad(file.name); }
+  };
   reader.readAsText(file,'windows-1252');
+}
+
+function finishLoad(fname) {
+  if (!anData.length) {
+    const err=document.getElementById('an-err');
+    err.innerHTML=`<div class="err-box">⚠ Nessuna riga valida trovata in "${fname}". Verifica che sia il file di analitica corretto (deve contenere le colonne TOTIMP, DATDOC, DESVOC).</div>`;
+    err.style.display='block';
+    document.getElementById('an-empty').style.display='block';
+    document.getElementById('an-fname').textContent='Carica CSV manualmente';
+    return;
+  }
+  document.getElementById('an-fname').textContent='✓ ' + fname + ' (' + anData.length + ' righe)';
+  setupAnFilters();
+  renderAnalitiche();
 }
 
 function setupAnFilters() {
