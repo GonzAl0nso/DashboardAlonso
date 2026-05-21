@@ -1,0 +1,21 @@
+Targa;Centro di costo;Categoria;Tipologia;Modello;Assegnazione;;Conto;Descrizione;Voce;Descrizione
+FP781CW ;VEVIGONOVOCRC;Dipendente;Autocarro;caspi;no;;30203050;Carburante autocarri;3020305001;Carburante autocarri
+GJ426VV ;VEHQSTR;Dipendente;Autovettura;Tucson 1.6 CRDI 48V DCT XLine;fringe benefit;;30203051;Carburante autovetture deducibile;3020305101;Carburante autovetture deducibili
+GL955PE ; VEJESOLOCRC;Dipendente;Autovettura;OPEL Corsa 1.5 D 100 CV Edition;fringe benefit;;30203052;Carburante autovetture indeducibili;3020305102;Carburante autovetture indeducibili
+GL960PE ; VEJESOLOCRC;Dipendente;Autovettura;OPEL Corsa 1.5 D 100 CV Edition;fringe benefit;;30203056;Carburante autovetture amministratori;3020305601;Carburante autovetture amministratori
+GM655PE ;VEVIGONOVOCRC;Dipendente;Autovettura;OPEL Corsa 1.5 D 100 CV Edition;fringe benefit;;30401003;Noleggio autocarri                                          ;3040100301;Noleggio autocarri                      
+GM965ZY ;VEHQAMM;Dipendente;Autovettura;A4 Avant 30 Tdi 136 Cv;fringe benefit;;30401004;Noleggio autovetture deducibile                                ;3040100401;Noleggio autovetture deducibile
+GP433MR ;VEHQGES;Dipendente;Autovettura;A4 Avant 30 Tdi 136 Cv;fringe benefit;;30401009;Noleggio autovetture indeducibile                   ;3040100901;Noleggio autovetture indeducibile                   
+GS784RK ;VEHQACQ;Dipendente;Autovettura;KIA  Xceed 1.6 Crdi 136 Cv Mhev Dct Business;fringe benefit;;30401011;Noleggio autovetture amministratori;3040101101;Noleggio autovetture amministratori
+GW527NN ;VEHQRIU;Dipendente;Autovettura;Tonale 1 6 Diesel 130 Cv Tct6 Sprint;fringe benefit;;;;;
+GY375AS ;VEHQSIC;Dipendente;Autovettura;PEUGEOT  308 Bluehdi 130 S&S Eat8 Sw Allure;fringe benefit;;;;;
+GZ850SP ;VEHQRFS;Dipendente;Autovettura;KIA SPORTAGE 1 6 Crdi Mhev ;fringe benefit;;;;;
+GZ851SP ;VEHQQGC;Dipendente;Autovettura;KIA SPORTAGE 1 6 Crdi Mhev ;fringe benefit;;;;;
+HA512AF ;VEHQAMM;Dipendente;Autovettura;Renault Clio 100 CV. 1.5 DCI ;fringe benefit;;;;;
+HA970XA ;VEHQRIU;Dipendente;Autovettura;DS 7 Bluehdi 130;fringe benefit;;;;;
+HB344BJ ;VEHQGES;Dipendente;Autovettura;BMW X2 sDRIVE 18d;fringe benefit;;;;;
+HB370BJ ;VEHQDIR;Amministratore;Autovettura;BMW X3 20D XDRIVE;fringe benefit;;;;;
+HB893TA ;VEHQAMM;Dipendente;Autovettura;BMW X2 sDRIVE 18d;fringe benefit;;;;;
+HA360XA ;VEHQACQ;Dipendente;Autovettura;Sportage 1 6 Crdi Mhev Dct Business;fringe benefit;;;;;
+HA361XA ;VEHQSIC;Dipendente;Autovettura;Sportage 1 6 Crdi Mhev Dct Business;fringe benefit;;;;;
+HC520BK;VEHQSTR;Dipendente;Autovettura;Tiguan 2 0 Tdi 150 Cv Dsg Edition Plus;fringe benefit;;;;;
